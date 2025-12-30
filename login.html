@@ -4,118 +4,116 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>เข้าสู่ระบบ - TAS-SPB</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="supabase.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600&display=swap" rel="stylesheet">
-    <style> body { font-family: 'Sarabun', sans-serif; } </style>
-</head>
-<body class="bg-blue-50 h-screen flex items-center justify-center">
+    
+    <style>
+        /* สไตล์พื้นฐาน (ไม่ใช้ CDN เพื่อให้ทำงานออฟไลน์ได้ชัวร์ๆ) */
+        body { font-family: sans-serif; background-color: #f3f4f6; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .card { background: white; padding: 2rem; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 100%; max-width: 350px; }
+        h2 { text-align: center; color: #1f2937; margin-bottom: 1.5rem; }
+        .form-group { margin-bottom: 1rem; }
+        label { display: block; color: #374151; margin-bottom: 0.5rem; font-weight: bold; }
+        input { width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.5rem; box-sizing: border-box; }
+        button { width: 100%; padding: 0.75rem; background-color: #2563eb; color: white; border: none; border-radius: 0.5rem; font-weight: bold; cursor: pointer; margin-top: 1rem; }
+        button:hover { background-color: #1d4ed8; }
+        button:disabled { background-color: #9ca3af; cursor: not-allowed; }
+        #msg { margin-top: 1rem; text-align: center; font-size: 0.9rem; color: red; min-height: 1.2em; }
+        .status-check { font-size: 0.8rem; text-align: center; color: #6b7280; margin-bottom: 1rem; }
+    </style>
 
-    <div class="bg-white p-8 rounded-lg shadow-xl max-w-sm w-full">
-        <h2 class="text-2xl font-bold text-center text-gray-800 mb-6">เข้าสู่ระบบ</h2>
+    <script src="supabase.js"></script> 
+</head>
+<body>
+
+    <div class="card">
+        <h2>เข้าสู่ระบบ</h2>
         
-        <form id="loginForm" class="space-y-4">
-            <div>
-                <label class="block text-gray-700 text-sm font-bold mb-2">รหัสพนักงาน (User ID)</label>
-                <input type="text" id="username" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="กรอกรหัสพนักงาน" required>
+        <div id="libStatus" class="status-check">กำลังตรวจสอบไฟล์ระบบ...</div>
+
+        <form id="loginForm">
+            <div class="form-group">
+                <label>รหัสพนักงาน</label>
+                <input type="text" id="username" placeholder="กรอกรหัสพนักงาน" required>
             </div>
-            <div>
-                <label class="block text-gray-700 text-sm font-bold mb-2">รหัสผ่าน (Password)</label>
-                <input type="password" id="password" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="กรอกรหัสผ่าน" required>
+            <div class="form-group">
+                <label>รหัสผ่าน</label>
+                <input type="password" id="password" placeholder="กรอกรหัสผ่าน" required>
             </div>
-            
-            <button type="submit" id="btnSubmit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition duration-300">
-                เข้าสู่ระบบ
-            </button>
+            <button type="submit" id="btnSubmit">เข้าสู่ระบบ</button>
         </form>
-        
-        <div id="debugArea" class="mt-4 p-2 bg-red-100 text-red-700 text-xs rounded hidden"></div>
+        <div id="msg"></div>
     </div>
 
     <script>
-        // --- การตั้งค่า Supabase ---
-        // (ค่านี้ดึงมาจาก secure_config.py ของคุณ)
+        const statusDiv = document.getElementById('msg');
+        const libStatus = document.getElementById('libStatus');
+        const btn = document.getElementById('btnSubmit');
+
+        // --- ส่วนการตั้งค่า (Config) ---
         const SUPABASE_URL = "https://tdcmbskmlrwhbjrjyjkk.supabase.co";
         const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRkY21ic2ttbHJ3aGJqcmp5amtrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI2MTY4NTYsImV4cCI6MjA3ODE5Mjg1Nn0.FeYe75J8X_2LoQgG_JWyPNCKcuCL_otsmSW0s5bijAg";
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        const debugArea = document.getElementById('debugArea');
+        // ตัวแปรสำหรับเก็บ Client (ใช้ชื่อ client เพื่อไม่ให้ชนกับชื่อ Library)
+        let client = null;
 
-        function showDebug(msg) {
-            console.error(msg);
-            debugArea.innerText = "Debug: " + JSON.stringify(msg);
-            debugArea.classList.remove('hidden');
+        // 2. ตรวจสอบว่าโหลดไฟล์ supabase.js สำเร็จไหม
+        if (typeof window.supabase === 'undefined') {
+            libStatus.innerText = "❌ ไม่พบไฟล์ supabase.js (กรุณาวางไฟล์ไว้ในโฟลเดอร์เดียวกัน)";
+            libStatus.style.color = "red";
+            btn.disabled = true;
+        } else {
+            libStatus.innerText = "✅ ระบบพร้อมใช้งาน";
+            libStatus.style.color = "green";
+            
+            try {
+                // สร้างการเชื่อมต่อ (ใช้ window.supabase)
+                client = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            } catch (err) {
+                statusDiv.innerText = "Config Error: " + err.message;
+            }
         }
 
+        // 3. ฟังก์ชันล็อกอิน
         document.getElementById('loginForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const btn = document.getElementById('btnSubmit');
+            if (!client) return;
+
             const user = document.getElementById('username').value.trim();
             const pass = document.getElementById('password').value;
 
             btn.disabled = true;
             btn.innerText = "กำลังตรวจสอบ...";
-            debugArea.classList.add('hidden');
+            statusDiv.innerText = "";
 
             try {
-                // 1. ลองค้นหา User
-                console.log("Searching for:", user);
-                const { data, error } = await supabase
-                    .from('Personnel') // ตรวจสอบชื่อตาราง (ตัวพิมพ์เล็กใหญ่ต้องตรงเป๊ะ)
-                    .select('*')       // ดึงมาทุกคอลัมน์เพื่อกันพลาดเรื่องชื่อ
+                // ดึงข้อมูลพนักงาน
+                const { data, error } = await client
+                    .from('Personnel')
+                    .select('*')
                     .eq('personnel_id', user)
-                    .single(); // ดึงรายการเดียว
+                    .single();
 
-                if (error) {
-                    // ถ้า Error เป็น PGRST116 แปลว่าหาไม่เจอ
-                    if (error.code === 'PGRST116') {
-                        throw new Error("ไม่พบรหัสพนักงานนี้ในระบบ");
-                    }
-                    // Error อื่นๆ (เช่น RLS permission denied)
-                    throw new Error("Database Error: " + error.message);
-                }
+                if (error) throw error;
+                if (!data) throw new Error("ไม่พบข้อมูลพนักงานนี้");
 
-                if (!data) {
-                    throw new Error("ไม่พบข้อมูลผู้ใช้งาน");
-                }
-
-                console.log("User found:", data);
-
-                // 2. ตรวจสอบรหัสผ่าน (รองรับทั้ง Password ตัวใหญ่และ password ตัวเล็ก)
-                // ดึงค่าจาก DB โดยไม่สนชื่อคอลัมน์
-                const dbPass = data.Password || data.password || ""; 
-
-                // เปรียบเทียบเป็น String ทั้งคู่เพื่อความชัวร์
+                // ตรวจสอบรหัสผ่าน (รองรับทั้งตัวพิมพ์เล็ก/ใหญ่ของชื่อคอลัมน์)
+                const dbPass = data.Password || data.password || "";
                 if (String(dbPass) !== String(pass)) {
                     throw new Error("รหัสผ่านไม่ถูกต้อง");
                 }
 
-                // 3. ผ่านการตรวจสอบ -> บันทึกและไปหน้าถัดไป
-                const userData = {
-                    personnel_id: data.personnel_id,
-                    name: data.name,
-                    level: data.level
-                };
-                localStorage.setItem('tas_user', JSON.stringify(userData));
-                
-                Swal.fire({
-                    icon: 'success',
-                    title: 'ยินดีต้อนรับ',
-                    text: 'เข้าสู่ระบบสำเร็จ',
-                    timer: 1500,
-                    showConfirmButton: false
-                }).then(() => {
-                    window.location.href = 'attendance.html';
-                });
+                // สำเร็จ -> บันทึกและเปลี่ยนหน้า
+                localStorage.setItem('tas_user', JSON.stringify(data));
+                window.location.href = 'attendance.html';
 
             } catch (err) {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'เข้าสู่ระบบไม่สำเร็จ',
-                    text: err.message
-                });
-                showDebug(err.message); // แสดง Error ที่หน้าจอเพื่อช่วยแก้ปัญหา
+                console.error(err);
+                let text = "เข้าสู่ระบบไม่สำเร็จ";
+                
+                if (err.code === 'PGRST116') text = "ไม่พบรหัสพนักงานนี้";
+                else if (err.message.includes('fetch')) text = "เชื่อมต่อเน็ตไม่ได้";
+                else text = err.message;
+
+                statusDiv.innerText = "❌ " + text;
                 btn.disabled = false;
                 btn.innerText = "เข้าสู่ระบบ";
             }
