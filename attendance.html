@@ -3,19 +3,39 @@
 <head>
     <meta charset="UTF-8">
     <title>จัดการเวลา (Level 1) - TAS-SPB</title>
+    <link rel="icon" type="image/png" href="favicon.png">
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     
     <style>
-        body { font-family: 'Sarabun', sans-serif; background-color: #f8fafc; padding: 20px; }
-        .container { max-width: 1100px; margin: 0 auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        .btn { padding: 10px 15px; border: none; border-radius: 5px; cursor: pointer; color: white; font-weight: bold; }
+        body { font-family: 'Sarabun', sans-serif; background-color: #f1f5f9; padding: 20px; color: #1e293b; }
+        .container { max-width: 1100px; margin: 0 auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e2e8f0; padding-bottom: 15px; margin-bottom: 20px; }
+        .back-btn { text-decoration: none; color: #64748b; font-weight: bold; background: #f8fafc; padding: 8px 15px; border-radius: 20px; border: 1px solid #e2e8f0; }
+        .toolbar { display: flex; gap: 15px; flex-wrap: wrap; margin-bottom: 20px; align-items: end; background: #f8fafc; padding: 15px; border-radius: 8px; }
+        .form-group { display: flex; flex-direction: column; }
+        input, select { padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-family: 'Sarabun'; }
+        
+        .btn { border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; color: white; display: inline-flex; align-items: center; gap: 5px; }
         .btn-primary { background: #3b82f6; } .btn-success { background: #10b981; } .btn-warning { background: #f59e0b; } .btn-danger { background: #ef4444; }
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-        th, td { padding: 10px; border-bottom: 1px solid #ddd; text-align: left; }
-        th { background: #e2e8f0; }
-        .toolbar { display: flex; gap: 10px; margin-bottom: 20px; align-items: flex-end; }
-        input { padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+        th { background-color: #e2e8f0; font-weight: 600; white-space: nowrap; }
+        tr:hover { background-color: #f8fafc; }
+        
+        /* 🔥 CSS สำหรับ Search Dropdown ใน Modal */
+        .search-container { position: relative; width: 100%; }
+        .search-results {
+            position: absolute; top: 100%; left: 0; right: 0;
+            background: white; border: 1px solid #cbd5e1; border-radius: 6px;
+            max-height: 150px; overflow-y: auto; z-index: 9999;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1); display: none;
+        }
+        .search-item { padding: 10px; cursor: pointer; border-bottom: 1px solid #f1f5f9; }
+        .search-item:hover { background-color: #e0f2fe; color: #0284c7; }
+        .modal-form { display: grid; gap: 15px; text-align: left; }
+        .readonly-input { background-color: #f1f5f9; color: #64748b; cursor: not-allowed; }
     </style>
 
     <script src="supabase.js"></script>
@@ -24,180 +44,312 @@
 </head>
 <body>
 
-<div class="container">
-    <h2>🛠️ จัดการข้อมูล (TimeStampPlus)</h2>
-    
-    <div class="toolbar">
-        <div>
-            <label>วันที่:</label>
-            <input type="date" id="filterDate">
+    <div class="container">
+        <div class="header">
+            <h2>🛠️ จัดการข้อมูลดิบ (TimeStampPlus)</h2>
+            <a href="menu.html" class="back-btn">⬅ กลับเมนูหลัก</a>
         </div>
-        <button class="btn btn-primary" onclick="loadData()">🔍 ค้นหา</button>
-        <button class="btn btn-success" onclick="openAddModal()">➕ เพิ่มรายการ</button>
-        <a href="menu.html" style="margin-left:auto;" class="btn btn-warning">กลับเมนู</a>
+
+        <div class="toolbar">
+            <div class="form-group">
+                <label>เลือกวันที่ทำงาน:</label>
+                <input type="date" id="filterDate">
+            </div>
+            <button class="btn btn-primary" onclick="loadData()">🔍 ค้นหา</button>
+            <div style="flex-grow: 1;"></div>
+            <button class="btn btn-success" onclick="openAddModal()">➕ เพิ่มรายการใหม่</button>
+        </div>
+
+        <div style="overflow-x: auto;">
+            <table id="mainTable">
+                <thead>
+                    <tr>
+                        <th>รหัส</th>
+                        <th>ชื่อ-สกุล</th>
+                        <th>เข้า</th>
+                        <th>ออก</th>
+                        <th>วันที่</th>
+                        <th style="text-align:center;">จัดการ</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    <tr><td colspan="6" style="text-align:center;">⏳ กำลังโหลดข้อมูล...</td></tr>
+                </tbody>
+            </table>
+        </div>
     </div>
 
-    <table id="mainTable">
-        <thead>
-            <tr>
-                <th>รหัส</th>
-                <th>ชื่อ-สกุล</th>
-                <th>เข้า</th>
-                <th>ออก</th>
-                <th>จัดการ</th>
-            </tr>
-        </thead>
-        <tbody id="tableBody"><tr><td colspan="5">เลือกวันที่แล้วกดค้นหา</td></tr></tbody>
-    </table>
-</div>
-
-<script>
-    // เริ่มต้นเช็คระบบ
-    if(typeof sbClient === 'undefined') {
-        alert("❌ ไม่พบการเชื่อมต่อ Supabase! กรุณาเช็คไฟล์ config.js");
-    }
-
-    // ตั้งค่าวันนี้เป็นค่าเริ่มต้น
-    document.getElementById('filterDate').value = new Date().toISOString().split('T')[0];
-
-    // โหลดข้อมูล
-    async function loadData() {
-        const date = document.getElementById('filterDate').value;
-        const tbody = document.getElementById('tableBody');
-        tbody.innerHTML = '<tr><td colspan="5">⏳ กำลังโหลด...</td></tr>';
-
-        try {
-            console.log("Fetching from:", TAS_CONFIG.TABLE_SOURCE, "Date:", date);
-            
-            const { data, error } = await sbClient
-                .from(TAS_CONFIG.TABLE_SOURCE)
-                .select('*')
-                .eq('work_date', date)
-                .order('time_in', { ascending: true });
-
-            if (error) throw error;
-
-            if (data.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5">ไม่พบข้อมูล</td></tr>';
-                return;
-            }
-
-            let html = '';
-            data.forEach(row => {
-                const tIn = row.time_in ? row.time_in.substring(0, 5) : '';
-                const tOut = row.time_out ? row.time_out.substring(0, 5) : '';
-                html += `
-                    <tr>
-                        <td>${row.personnel_id}</td>
-                        <td>${row.full_name}</td>
-                        <td>${tIn}</td>
-                        <td>${tOut}</td>
-                        <td>
-                            <button class="btn btn-warning" onclick="editData('${row.id}', '${tIn}', '${tOut}')">✏️</button>
-                            <button class="btn btn-danger" onclick="delData('${row.id}')">🗑️</button>
-                        </td>
-                    </tr>`;
-            });
-            tbody.innerHTML = html;
-
-        } catch (err) {
-            console.error(err);
-            tbody.innerHTML = `<tr><td colspan="5" style="color:red">❌ Error: ${err.message}</td></tr>`;
+    <script>
+        // --- ส่วนเริ่มต้นระบบ ---
+        if (typeof sbClient === 'undefined') {
+            Swal.fire('Error', 'ไม่พบการเชื่อมต่อ Supabase (check config.js)', 'error');
         }
-    }
 
-    // เพิ่มข้อมูล
-    async function openAddModal() {
-        const { value: f } = await Swal.fire({
-            title: 'เพิ่มข้อมูลใหม่',
-            html: `
-                <input id="swal-pid" class="swal2-input" placeholder="รหัสพนักงาน">
-                <input id="swal-name" class="swal2-input" placeholder="ชื่อ-สกุล">
-                <input type="time" id="swal-in" class="swal2-input">
-                <input type="time" id="swal-out" class="swal2-input">
-            `,
-            preConfirm: () => ({
-                pid: document.getElementById('swal-pid').value,
-                name: document.getElementById('swal-name').value,
-                in: document.getElementById('swal-in').value,
-                out: document.getElementById('swal-out').value
-            })
-        });
-
-        if (f) {
-            if(!f.pid) return alert("ต้องใส่รหัสพนักงาน");
-
-            try {
-                // สร้าง ID อัตโนมัติ (YYYYMMDDHHmmSS + Random)
-                const d = new Date();
-                const newId = d.toISOString().replace(/[-:T.]/g, '').slice(0,14) + Math.floor(Math.random()*1000);
-                const wDate = document.getElementById('filterDate').value;
-
-                console.log("Saving...", { newId, ...f, wDate });
-
-                const { error } = await sbClient
-                    .from(TAS_CONFIG.TABLE_SOURCE)
-                    .insert([{
-                        id: newId,
-                        personnel_id: f.pid,
-                        full_name: f.name,
-                        work_date: wDate,
-                        time_in: f.in || null,
-                        time_out: f.out || null
-                    }]);
-
-                if (error) throw error;
-                
-                Swal.fire('สำเร็จ', 'บันทึกแล้ว', 'success');
-                loadData();
-            } catch (err) {
-                alert("❌ บันทึกไม่สำเร็จ: " + err.message);
-                console.error(err);
-            }
+        // ฟังก์ชันวันที่สำหรับ DB
+        function getDBDateString(date = new Date()) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
         }
-    }
 
-    // แก้ไขข้อมูล
-    async function editData(id, oldIn, oldOut) {
-        const { value: f } = await Swal.fire({
-            title: 'แก้ไขเวลา',
-            html: `
-                เข้า: <input type="time" id="edit-in" class="swal2-input" value="${oldIn}"><br>
-                ออก: <input type="time" id="edit-out" class="swal2-input" value="${oldOut}">
-            `,
-            preConfirm: () => ({
-                in: document.getElementById('edit-in').value,
-                out: document.getElementById('edit-out').value
-            })
-        });
-
-        if (f) {
-            try {
-                const { error } = await sbClient
-                    .from(TAS_CONFIG.TABLE_SOURCE)
-                    .update({ time_in: f.in || null, time_out: f.out || null })
-                    .eq('id', id);
-
-                if (error) throw error;
-                Swal.fire('เรียบร้อย', 'อัปเดตข้อมูลแล้ว', 'success');
-                loadData();
-            } catch (err) {
-                alert("❌ แก้ไขไม่ได้: " + err.message);
-            }
-        }
-    }
-
-    // ลบข้อมูล
-    async function delData(id) {
-        if(!confirm('ยืนยันลบรายการนี้?')) return;
-        try {
-            const { error } = await sbClient.from(TAS_CONFIG.TABLE_SOURCE).delete().eq('id', id);
-            if (error) throw error;
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('filterDate').value = getDBDateString();
             loadData();
-        } catch (err) {
-            alert("❌ ลบไม่ได้: " + err.message);
+        });
+
+        // --- โหลดข้อมูล ---
+        async function loadData() {
+            const date = document.getElementById('filterDate').value;
+            const tbody = document.getElementById('tableBody');
+            
+            if(!date) return;
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">⏳ กำลังดึงข้อมูล...</td></tr>';
+
+            try {
+                const { data, error } = await sbClient
+                    .from(TAS_CONFIG.TABLE_SOURCE) 
+                    .select('*')
+                    .eq('work_date', date)
+                    .order('time_in', { ascending: true });
+
+                if (error) throw error;
+
+                if (data.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:#64748b;">ไม่พบข้อมูลในวันที่ ${formatDateThai(date)}</td></tr>`;
+                    return;
+                }
+
+                let html = '';
+                data.forEach(row => {
+                    const tIn = row.time_in ? row.time_in.substring(0, 5) : '-';
+                    const tOut = row.time_out ? row.time_out.substring(0, 5) : '-';
+                    
+                    html += `
+                        <tr>
+                            <td>${row.personnel_id || ''}</td>
+                            <td>${row.full_name || ''}</td>
+                            <td style="color:green; font-weight:bold;">${tIn}</td>
+                            <td style="color:red; font-weight:bold;">${tOut}</td>
+                            <td>${formatDateThai(row.work_date)}</td>
+                            <td style="text-align:center;">
+                                <button class="btn btn-warning" style="padding:5px 10px; font-size:0.8rem;" onclick="openEditModal('${row.id}', '${row.personnel_id}', '${row.full_name}', '${tIn}', '${tOut}')">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-danger" style="padding:5px 10px; font-size:0.8rem;" onclick="deleteRecord('${row.id}')">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                });
+                tbody.innerHTML = html;
+
+            } catch (err) {
+                console.error(err);
+                tbody.innerHTML = `<tr><td colspan="6" style="color:red;text-align:center;">Error: ${err.message}</td></tr>`;
+            }
         }
-    }
-</script>
+
+        // --- 🔥 ฟังก์ชันเพิ่มข้อมูลแบบ Real-time Search ---
+        async function openAddModal() {
+            const curDate = document.getElementById('filterDate').value;
+            
+            await Swal.fire({
+                title: 'เพิ่มข้อมูลลงเวลา (Manual)',
+                html: `
+                    <div class="modal-form">
+                        <div class="search-container">
+                            <label>🔍 ค้นหาชื่อพนักงาน:</label>
+                            <input id="search-box" class="swal2-input" placeholder="พิมพ์ชื่อเพื่อค้นหา..." autocomplete="off">
+                            <div id="search-results" class="search-results"></div>
+                        </div>
+
+                        <div style="display:flex; gap:10px;">
+                            <div style="flex:1">
+                                <label>รหัสพนักงาน:</label>
+                                <input id="swal-pid" class="swal2-input readonly-input" readonly>
+                            </div>
+                            <div style="flex:2">
+                                <label>ชื่อ-สกุล:</label>
+                                <input id="swal-name" class="swal2-input readonly-input" readonly>
+                            </div>
+                        </div>
+                        
+                        <label>วันที่:</label>
+                        <input type="date" id="swal-date" class="swal2-input" value="${curDate}">
+                        
+                        <div style="display:flex; gap:10px;">
+                            <div style="flex:1"><label>เวลาเข้า:</label><input type="time" id="swal-in" class="swal2-input"></div>
+                            <div style="flex:1"><label>เวลาออก:</label><input type="time" id="swal-out" class="swal2-input"></div>
+                        </div>
+                    </div>
+                `,
+                focusConfirm: false,
+                showCancelButton: true,
+                confirmButtonText: 'บันทึก',
+                cancelButtonText: 'ยกเลิก',
+                
+                // 🔥 Logic ค้นหาเรียลไทม์
+                didOpen: () => {
+                    const searchBox = Swal.getPopup().querySelector('#search-box');
+                    const resultsBox = Swal.getPopup().querySelector('#search-results');
+                    const pidInput = Swal.getPopup().querySelector('#swal-pid');
+                    const nameInput = Swal.getPopup().querySelector('#swal-name');
+
+                    searchBox.addEventListener('input', async (e) => {
+                        const keyword = e.target.value.trim();
+                        if (keyword.length < 2) { 
+                            resultsBox.style.display = 'none'; 
+                            return; 
+                        }
+
+                        // ค้นหาจากตาราง Personnel
+                        const { data } = await sbClient
+                            .from('Personnel')
+                            .select('personnel_id, name')
+                            .ilike('name', `%${keyword}%`) // ค้นหาบางส่วนของคำ
+                            .limit(5);
+
+                        resultsBox.innerHTML = '';
+                        if (data && data.length > 0) {
+                            resultsBox.style.display = 'block';
+                            data.forEach(p => {
+                                const item = document.createElement('div');
+                                item.className = 'search-item';
+                                item.innerText = `${p.name} (${p.personnel_id})`;
+                                
+                                // เมื่อคลิกเลือก
+                                item.onclick = () => {
+                                    pidInput.value = p.personnel_id;
+                                    nameInput.value = p.name;
+                                    searchBox.value = ''; // ล้างช่องค้นหา
+                                    resultsBox.style.display = 'none'; // ซ่อนรายการ
+                                };
+                                resultsBox.appendChild(item);
+                            });
+                        } else {
+                            resultsBox.style.display = 'none';
+                        }
+                    });
+                },
+                preConfirm: () => {
+                    const pid = document.getElementById('swal-pid').value;
+                    const date = document.getElementById('swal-date').value;
+                    if (!pid) return Swal.showValidationMessage('กรุณาค้นหาและเลือกพนักงานก่อน');
+                    if (!date) return Swal.showValidationMessage('กรุณาระบุวันที่');
+                    
+                    return {
+                        pid: pid,
+                        name: document.getElementById('swal-name').value,
+                        date: date,
+                        in: document.getElementById('swal-in').value,
+                        out: document.getElementById('swal-out').value
+                    }
+                }
+            }).then(async (result) => {
+                if (result.isConfirmed) {
+                    const f = result.value;
+                    await saveData(f);
+                }
+            });
+        }
+
+        // ฟังก์ชันบันทึกข้อมูลลง TimeStampPlus
+        async function saveData(f) {
+            try {
+                // สร้าง ID 18 หลัก
+                const newID = generateLongID();
+
+                const { error } = await sbClient.from(TAS_CONFIG.TABLE_SOURCE).insert([{
+                    id: newID,
+                    personnel_id: f.pid,
+                    full_name: f.name,
+                    work_date: f.date,
+                    time_in: f.in || null,
+                    time_out: f.out || null
+                }]);
+
+                if (error) throw error;
+                Swal.fire('สำเร็จ', 'บันทึกข้อมูลเรียบร้อย', 'success');
+                loadData(); // โหลดตารางใหม่
+            } catch (err) {
+                Swal.fire('Error', err.message, 'error');
+            }
+        }
+
+        // --- แก้ไขข้อมูล (Edit) ---
+        async function openEditModal(id, pid, name, tIn, tOut) {
+            tIn = (tIn === '-') ? '' : tIn;
+            tOut = (tOut === '-') ? '' : tOut;
+
+            const { value: f } = await Swal.fire({
+                title: `แก้ไข: ${name}`,
+                html: `
+                    <div class="modal-form">
+                        <div style="display:flex; gap:10px;">
+                            <div style="flex:1"><label>เวลาเข้า</label><input type="time" id="edit-in" class="swal2-input" value="${tIn}"></div>
+                            <div style="flex:1"><label>เวลาออก</label><input type="time" id="edit-out" class="swal2-input" value="${tOut}"></div>
+                        </div>
+                    </div>
+                `,
+                showCancelButton: true,
+                confirmButtonText: 'อัปเดต',
+                preConfirm: () => ({
+                    in: document.getElementById('edit-in').value,
+                    out: document.getElementById('edit-out').value
+                })
+            });
+
+            if (f) {
+                try {
+                    const { error } = await sbClient.from(TAS_CONFIG.TABLE_SOURCE)
+                        .update({ time_in: f.in || null, time_out: f.out || null })
+                        .eq('id', id);
+
+                    if (error) throw error;
+                    Swal.fire('สำเร็จ', 'อัปเดตข้อมูลแล้ว', 'success');
+                    loadData();
+                } catch (err) {
+                    Swal.fire('Error', err.message, 'error');
+                }
+            }
+        }
+
+        // --- ลบข้อมูล ---
+        function deleteRecord(id) {
+            Swal.fire({
+                title: 'ยืนยันลบ?',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                confirmButtonText: 'ลบเลย'
+            }).then(async (result) => {
+                if (result.isConfirmed) {
+                    const { error } = await sbClient.from(TAS_CONFIG.TABLE_SOURCE).delete().eq('id', id);
+                    if (!error) {
+                        loadData();
+                        Swal.fire('Deleted!', 'ลบเรียบร้อย', 'success');
+                    } else {
+                        Swal.fire('Error', error.message, 'error');
+                    }
+                }
+            })
+        }
+
+        // Helper
+        function formatDateThai(dateStr) {
+            if(!dateStr) return "-";
+            const d = new Date(dateStr);
+            return `${d.getDate()}/${d.getMonth()+1}/${d.getFullYear() + 543}`;
+        }
+
+        function generateLongID() {
+            const now = new Date();
+            const pad = (n) => String(n).padStart(2, '0');
+            const r = Math.floor(Math.random() * 9999).toString().padStart(4, '0');
+            return `${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}${r}`;
+        }
+    </script>
 </body>
 </html>
