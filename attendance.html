@@ -6,19 +6,25 @@
     <title>ลงเวลาทำงาน - TAS-SPB</title>
     
     <style>
+        /* สไตล์หลัก */
         body { font-family: 'Sarabun', sans-serif; background-color: #f3f4f6; display: flex; flex-direction: column; align-items: center; min-height: 100vh; margin: 0; padding: 20px; box-sizing: border-box; }
+        
+        /* ส่วนหัว */
         .header { width: 100%; max-width: 400px; display: flex; justify-content: space-between; margin-bottom: 20px; font-size: 1rem; color: #4b5563; align-items: center; }
-        .logout { color: #ef4444; cursor: pointer; text-decoration: none; border: 1px solid #ef4444; background: none; font-size: 0.85rem; padding: 5px 10px; border-radius: 20px; transition: all 0.3s; }
+        .logout { color: #ef4444; cursor: pointer; text-decoration: none; border: 1px solid #ef4444; background: none; font-size: 0.85rem; padding: 5px 12px; border-radius: 20px; transition: all 0.3s; }
         .logout:hover { background-color: #ef4444; color: white; }
         
+        /* การ์ดหลัก */
         .card { background: white; padding: 2rem; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); width: 100%; max-width: 400px; text-align: center; }
         
+        /* วันที่และนาฬิกา */
         .date-display { font-size: 1.2rem; color: #1f2937; margin-bottom: 0.5rem; font-weight: bold; }
         .db-date-format { font-size: 0.85rem; color: #9ca3af; margin-bottom: 1.5rem; font-family: monospace; background: #f9fafb; display: inline-block; padding: 2px 8px; border-radius: 4px; }
         
         .clock-box { background: linear-gradient(145deg, #f3f4f6, #ffffff); border-radius: 15px; padding: 1.5rem; margin-bottom: 2rem; box-shadow: inset 5px 5px 10px #e1e2e4, inset -5px -5px 10px #ffffff; }
         .clock { font-size: 3.5rem; font-family: 'Courier New', monospace; font-weight: bold; color: #2563eb; letter-spacing: 2px; text-shadow: 2px 2px 4px rgba(0,0,0,0.1); }
         
+        /* ปุ่มกดเข้า-ออก */
         .btn-group { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
         .btn { padding: 1.2rem; border: none; border-radius: 15px; font-size: 1.1rem; font-weight: bold; color: white; cursor: pointer; transition: transform 0.1s, box-shadow 0.3s; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         .btn:active { transform: scale(0.95); }
@@ -27,19 +33,23 @@
         .btn-out { background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); }
         .btn-out:hover { box-shadow: 0 6px 15px rgba(249, 115, 22, 0.4); }
         
+        /* ส่วนแสดงสถานะ */
         .status-area { margin-top: 2rem; padding-top: 1.5rem; border-top: 1px dashed #e5e7eb; font-size: 0.95rem; color: #4b5563; }
-        .status-row { display: flex; justify-content: space-between; align-items: center; margin-top: 1rem; background: #f9fafb; padding: 10px; border-radius: 10px; }
-        .time-val { font-weight: bold; color: #111827; font-family: monospace; font-size: 1.2rem; }
+        .status-title { font-weight: bold; margin-bottom: 10px; color: #374151; text-align: left; }
+        .status-row { display: flex; justify-content: space-between; align-items: center; margin-top: 0.8rem; background: #f9fafb; padding: 10px 15px; border-radius: 10px; }
+        .time-val { font-weight: bold; color: #111827; font-family: monospace; font-size: 1.1rem; }
         
+        /* ปุ่มแก้ไข */
         .btn-edit {
             background-color: white; border: 1px solid #d1d5db; color: #4b5563;
-            font-size: 0.8rem; padding: 5px 10px; border-radius: 8px; cursor: pointer; margin-left: 10px; transition: all 0.2s;
+            font-size: 0.8rem; padding: 4px 10px; border-radius: 6px; cursor: pointer; margin-left: 10px; transition: all 0.2s;
         }
         .btn-edit:hover { background-color: #2563eb; color: white; border-color: #2563eb; }
     </style>
 
     <script src="supabase.js"></script>
-    <script src="sweetalert2.js"></script> </head>
+    <script src="sweetalert2.js"></script>
+</head>
 <body>
 
     <div class="header">
@@ -49,7 +59,7 @@
 
     <div class="card">
         <div class="date-display" id="humanDate">-</div>
-        <div class="db-date-format">DB Format: <span id="dbDateDisplay">-</span></div>
+        <div class="db-date-format">Work Date: <span id="dbDateDisplay">-</span></div>
         
         <div class="clock-box">
             <div class="clock" id="clockDisplay">00:00:00</div>
@@ -61,19 +71,19 @@
         </div>
 
         <div class="status-area">
-            <div style="font-weight: bold; margin-bottom: 10px;">📊 สถานะวันนี้</div>
+            <div class="status-title">📊 สถานะวันนี้ (จาก DB)</div>
             
             <div class="status-row">
-                <span>เข้า:</span>
-                <div>
+                <span>เวลาเข้า:</span>
+                <div style="display: flex; align-items: center;">
                     <span id="timeInDisplay" class="time-val">-</span>
                     <button class="btn-edit" onclick="editTime('time_in')">✏️ แก้ไข</button>
                 </div>
             </div>
 
             <div class="status-row">
-                <span>ออก:</span>
-                <div>
+                <span>เวลาออก:</span>
+                <div style="display: flex; align-items: center;">
                     <span id="timeOutDisplay" class="time-val">-</span>
                     <button class="btn-edit" onclick="editTime('time_out')">✏️ แก้ไข</button>
                 </div>
@@ -82,6 +92,7 @@
     </div>
 
     <script>
+        // --- การตั้งค่า Supabase ---
         const SUPABASE_URL = "https://tdcmbskmlrwhbjrjyjkk.supabase.co";
         const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRkY21ic2ttbHJ3aGJqcmp5amtrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI2MTY4NTYsImV4cCI6MjA3ODE5Mjg1Nn0.FeYe75J8X_2LoQgG_JWyPNCKcuCL_otsmSW0s5bijAg";
         
@@ -89,8 +100,8 @@
         let userData = null;
         let currentRecord = null;
 
-        // 🔥 สร้าง Toast Notification (แจ้งเตือนมุมขวาบน)
-        const Toast = Swal.mixin({
+        // ตั้งค่า Toast Notification (แจ้งเตือนมุมขวาบน)
+        const Toast = typeof Swal !== 'undefined' ? Swal.mixin({
             toast: true,
             position: 'top-end',
             showConfirmButton: false,
@@ -100,8 +111,9 @@
                 toast.addEventListener('mouseenter', Swal.stopTimer)
                 toast.addEventListener('mouseleave', Swal.resumeTimer)
             }
-        });
+        }) : null;
 
+        // 🔥 สร้าง ID (YYYYMMDDHHmmss + สุ่ม 4 หลัก) -> รวม 18 หลัก (ไม่เกิน 20)
         function generateID() {
             const now = new Date();
             const yy = String(now.getFullYear());
@@ -114,8 +126,10 @@
             return `${yy}${mm}${dd}${h}${m}${s}${r}`;
         }
 
+        // เริ่มต้นระบบ
         function init() {
             try {
+                // เช็ค Login
                 const stored = localStorage.getItem('tas_user');
                 if (!stored) {
                     window.location.href = 'login.html';
@@ -124,10 +138,13 @@
                 userData = JSON.parse(stored);
                 document.getElementById('userName').innerText = userData.name || userData.personnel_id;
 
+                // เช็ค Library
                 if (typeof window.supabase === 'undefined' || typeof Swal === 'undefined') {
-                    alert("ไม่พบไฟล์ supabase.js หรือ sweetalert2.js");
+                    alert("❌ ไม่พบไฟล์ supabase.js หรือ sweetalert2.js ในโฟลเดอร์");
                     return;
                 }
+                
+                // เชื่อมต่อ DB
                 client = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
                 
                 startClock();
@@ -139,18 +156,20 @@
             }
         }
 
+        // จัดรูปแบบวันเวลา (Local Time)
         function getDBFormatValues() {
             const now = new Date();
             const year = now.getFullYear();
             const month = String(now.getMonth() + 1).padStart(2, '0');
             const day = String(now.getDate()).padStart(2, '0');
+            
             const hours = String(now.getHours()).padStart(2, '0');
             const minutes = String(now.getMinutes()).padStart(2, '0');
             const seconds = String(now.getSeconds()).padStart(2, '0');
 
             return {
-                date: `${year}-${month}-${day}`, 
-                time: `${hours}:${minutes}:${seconds}`, 
+                date: `${year}-${month}-${day}`, // YYYY-MM-DD
+                time: `${hours}:${minutes}:${seconds}`, // HH:MM:SS
                 obj: now
             };
         }
@@ -169,6 +188,7 @@
             document.getElementById('clockDisplay').innerText = val.time;
         }
 
+        // โหลดข้อมูลวันนี้
         async function loadTodayRecord() {
             if (!client) return;
             const val = getDBFormatValues();
@@ -194,38 +214,44 @@
                     return null;
                 }
             } catch (err) {
+                // PGRST116 คือหาไม่เจอ (เป็นเรื่องปกติ)
                 if (err.code !== 'PGRST116') console.error(err);
                 currentRecord = null;
                 return null;
             }
         }
 
-        // 🔥 ฟังก์ชันแก้ไขเวลา (ใช้ Time Picker)
+        // 🔥 ฟังก์ชันแก้ไขเวลา (อัปเดตใหม่: step=1 เพื่อรองรับวินาที)
         async function editTime(field) {
             if (!client) return;
             
             if (!currentRecord) {
-                Swal.fire('แจ้งเตือน', 'กรุณากดลงเวลาก่อน จึงจะแก้ไขได้', 'warning');
+                Swal.fire('แจ้งเตือน', 'กรุณากดปุ่มลงเวลาก่อน จึงจะแก้ไขได้', 'warning');
                 return;
             }
 
             const oldVal = field === 'time_in' ? currentRecord.time_in : currentRecord.time_out;
-            
-            // 🔥 ใช้ SweetAlert แบบ input time (สวยและใช้ง่ายกว่าเดิม)
+            const labelText = field === 'time_in' ? 'เวลาเข้า' : 'เวลาออก';
+
+            // Popup เลือกเวลา
             const { value: newVal } = await Swal.fire({
-                title: `แก้ไขเวลา${field === 'time_in' ? 'เข้า' : 'ออก'}`,
+                title: `แก้ไข${labelText}`,
                 input: 'time',
-                inputLabel: 'เลือกเวลาที่ถูกต้อง',
-                inputValue: oldVal || '08:00',
+                inputLabel: 'ระบุเวลาใหม่ (HH:MM:SS)',
+                inputValue: oldVal || '08:00:00',
+                // 🔥 สำคัญ: step 1 ทำให้เลือกวินาทีได้ และไม่ error
+                inputAttributes: {
+                    step: 1
+                },
                 showCancelButton: true,
                 confirmButtonText: 'บันทึก',
                 cancelButtonText: 'ยกเลิก',
                 confirmButtonColor: '#2563eb'
             });
 
-            if (!newVal) return; // กดยกเลิก
+            if (!newVal) return; 
 
-            // แปลงค่าจาก HH:MM เป็น HH:MM:00 (เติมวินาทีให้)
+            // ตรวจสอบรูปแบบ HH:MM หรือ HH:MM:SS
             const timeToSave = newVal.length === 5 ? newVal + ":00" : newVal;
 
             try {
@@ -248,10 +274,10 @@
             }
         }
 
+        // บันทึกเวลา (เข้า/ออก)
         async function recordTime(type) {
             if (!client) return;
 
-            // 🔥 ใช้ Popup ยืนยันแบบสวย
             const result = await Swal.fire({
                 title: 'ยืนยันการลงเวลา?',
                 text: `ต้องการลงเวลา ${type === 'in' ? 'เข้างาน' : 'เลิกงาน'} ใช่หรือไม่?`,
@@ -276,17 +302,21 @@
 
                 if (type === 'in') {
                     if (existing) {
+                        // มีแล้ว -> Update
                         const { error: upError } = await client.from('TimeStampPlus').update({ time_in: timeDB }).eq('id', existing.id);
                         error = upError;
                     } else {
+                        // ใหม่ -> Insert (ใส่ ID เอง + ตัด verified)
                         const { error: insError } = await client.from('TimeStampPlus').insert([{ id: newID, personnel_id: userData.personnel_id, full_name: userData.name, work_date: todayDB, time_in: timeDB }]);
                         error = insError;
                     }
                 } else { 
                     if (existing) {
+                        // มีแล้ว -> Update
                         const { error: upError } = await client.from('TimeStampPlus').update({ time_out: timeDB }).eq('id', existing.id);
                         error = upError;
                     } else {
+                        // ใหม่ (ออกก่อนเข้า) -> Insert
                         const { error: insError } = await client.from('TimeStampPlus').insert([{ id: newID, personnel_id: userData.personnel_id, full_name: userData.name, work_date: todayDB, time_out: timeDB }]);
                         error = insError;
                     }
@@ -294,7 +324,6 @@
 
                 if (error) throw error;
 
-                // 🔥 ใช้ Toast แทนแถบดำ
                 Toast.fire({ icon: 'success', title: 'บันทึกเวลาสำเร็จ!' });
                 loadTodayRecord();
 
@@ -320,6 +349,7 @@
             });
         }
 
+        // เริ่มทำงาน
         init();
     </script>
 </body>
