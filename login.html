@@ -10,20 +10,19 @@
         body { font-family: 'Sarabun', sans-serif; background: #e0e7ff; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
         .card { background: white; padding: 2.5rem; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 100%; max-width: 380px; text-align: center; }
         .app-logo { font-size: 3rem; margin-bottom: 10px; display: block; }
-        h2 { color: #1f2937; margin-bottom: 2rem; font-size: 1.5rem; }
+        h2 { color: #1f2937; margin-bottom: 2rem; }
         input { width: 100%; padding: 0.8rem; margin-bottom: 1rem; border: 1px solid #d1d5db; border-radius: 10px; box-sizing: border-box; font-size: 1rem; }
-        button { width: 100%; padding: 0.9rem; background-color: #4f46e5; color: white; border: none; border-radius: 10px; font-weight: bold; font-size: 1rem; cursor: pointer; transition: 0.3s; }
+        button { width: 100%; padding: 0.9rem; background-color: #4f46e5; color: white; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; transition: 0.3s; }
         button:hover { background-color: #4338ca; }
     </style>
 
     <script src="supabase.js"></script>
     <script src="sweetalert2.js"></script>
-</head>
+    <script src="config.js"></script> </head>
 <body>
     <div class="card">
         <span class="app-logo">🏫</span>
         <h2>ระบบลงเวลา TAS-SPB</h2>
-        
         <form id="loginForm">
             <input type="text" id="username" placeholder="รหัสพนักงาน" required>
             <input type="password" id="password" placeholder="รหัสผ่าน" required>
@@ -32,23 +31,9 @@
     </div>
 
     <script>
-        // --- CONFIG ---
-        const SUPABASE_URL = "https://tdcmbskmlrwhbjrjyjkk.supabase.co";
-        const SUPABASE_KEY = "ใส่_KEY_ใหม่ของคุณที่นี่"; // ⚠️ อย่าลืมใส่ Key ใหม่
-
-        let client = null;
-
-        // Init
-        if (typeof window.supabase !== 'undefined' && typeof Swal !== 'undefined') {
-            client = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-        } else {
-            alert("❌ ไม่พบไฟล์ System Library");
-        }
-
         document.getElementById('loginForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            if (!client) return;
-
+            
             const user = document.getElementById('username').value.trim();
             const pass = document.getElementById('password').value;
             const btn = document.getElementById('btnSubmit');
@@ -57,22 +42,17 @@
             btn.innerText = "กำลังตรวจสอบ...";
 
             try {
-                const { data, error } = await client.from('Personnel')
+                // ใช้ sbClient จาก config.js ได้เลย
+                const { data, error } = await sbClient.from(TAS_CONFIG.TABLE_USER)
                     .select('*').eq('personnel_id', user).single();
 
                 if (error || !data) throw new Error("ไม่พบข้อมูลผู้ใช้");
 
-                // ตรวจสอบรหัสผ่าน
                 const dbPass = data.Password || data.password || "";
                 if (String(dbPass) !== String(pass)) throw new Error("รหัสผ่านไม่ถูกต้อง");
 
-                // ตรวจสอบระดับ (Level 1 เท่านั้น)
-                // *หมายเหตุ: ถ้าต้องการให้ Level อื่นเข้าได้ด้วย ให้แก้เงื่อนไขตรงนี้
-                if (String(data.level) !== '1') {
-                    throw new Error("สิทธิ์การใช้งานของคุณไม่ถูกต้อง (เฉพาะ Level 1)");
-                }
+                if (String(data.level) !== '1') throw new Error("สิทธิ์การใช้งานของคุณไม่ถูกต้อง (เฉพาะ Level 1)");
 
-                // บันทึกและไปหน้าเมนู
                 localStorage.setItem('tas_user', JSON.stringify(data));
                 
                 await Swal.fire({
@@ -81,10 +61,10 @@
                     timer: 1000, showConfirmButton: false
                 });
 
-                window.location.href = 'menu.html'; // ไปหน้าเมนู
+                window.location.href = 'menu.html';
 
             } catch (err) {
-                Swal.fire('เข้าสู่ระบบไม่สำเร็จ', err.message, 'error');
+                Swal.fire('Login Failed', err.message, 'error');
                 btn.disabled = false;
                 btn.innerText = "เข้าสู่ระบบ";
             }
