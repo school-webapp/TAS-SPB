@@ -6,12 +6,14 @@
     <link rel="icon" type="image/png" href="favicon.png">
     <style>
         body { font-family: 'Sarabun', sans-serif; background: #f8fafc; padding: 20px; display: flex; flex-direction: column; align-items: center; }
-        .container { width: 100%; max-width: 600px; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); text-align: center; }
+        .container { width: 100%; max-width: 700px; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); text-align: center; }
         .btn-process { background: linear-gradient(135deg, #6366f1, #4f46e5); color: white; border: none; padding: 15px 30px; border-radius: 30px; font-size: 1.2rem; font-weight: bold; cursor: pointer; margin: 20px 0; box-shadow: 0 4px 6px rgba(79, 70, 229, 0.3); transition: transform 0.2s; }
         .btn-process:active { transform: scale(0.95); }
         .btn-process:disabled { background: #cbd5e1; cursor: not-allowed; box-shadow: none; }
-        .log-box { text-align: left; background: #1e293b; color: #334155; border-radius: 10px; padding: 15px; height: 200px; overflow-y: auto; font-family: monospace; font-size: 0.9rem; border: 1px solid #e2e8f0; color: #10b981; }
+        .log-box { text-align: left; background: #1e293b; color: #10b981; border-radius: 10px; padding: 15px; height: 300px; overflow-y: auto; font-family: monospace; font-size: 0.9rem; border: 1px solid #e2e8f0; }
         .back-btn { text-decoration: none; color: #64748b; font-weight: bold; display: inline-block; margin-bottom: 20px; }
+        .highlight { color: #fbbf24; } /* สีเหลืองสำหรับข้อความสำคัญ */
+        .error { color: #ef4444; } /* สีแดงสำหรับ Error */
     </style>
     
     <script src="supabase.js"></script>
@@ -22,8 +24,8 @@
     <a href="menu.html" class="back-btn">⬅ กลับเมนูหลัก</a>
 
     <div class="container">
-        <h2>🔄 ประมวลผลและรวมข้อมูล</h2>
-        <p>ดึงข้อมูลจาก <b>Web</b> และ <b>Data URL</b><br>คัดเลือกเวลาที่ดีที่สุด แล้วบันทึกลง <b>TimeStamp</b></p>
+        <h2>🔄 ประมวลผลและรวมข้อมูล (Auto Sync)</h2>
+        <p>ระบบจะค้นหา <b>วันที่ล่าสุด</b> จาก TimeStamp <br>และดึงข้อมูลย้อนหลังจนถึงปัจจุบันจากทั้ง 2 แหล่ง</p>
         
         <button id="btnStart" class="btn-process" onclick="startProcess()">🚀 เริ่มการประมวลผล</button>
         
@@ -35,10 +37,26 @@
     <script>
         const user = checkAuth(); // เช็ค Level 1
 
-        function log(msg) {
+        function log(msg, type = 'normal') {
             const box = document.getElementById('logDisplay');
-            box.innerHTML += `<div>> ${msg}</div>`;
+            let colorClass = '';
+            if(type === 'highlight') colorClass = 'class="highlight"';
+            if(type === 'error') colorClass = 'class="error"';
+            
+            box.innerHTML += `<div ${colorClass}>> ${msg}</div>`;
             box.scrollTop = box.scrollHeight;
+        }
+
+        // ฟังก์ชันแปลง Date เป็น YYYY-MM-DD (สำหรับ DB)
+        function formatDateDB(date) {
+            const pad = (n) => String(n).padStart(2, '0');
+            return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+        }
+
+        // ฟังก์ชันแปลง Date เป็น DDMMYYYY (สำหรับ URL)
+        function formatDateURL(date) {
+            const pad = (n) => String(n).padStart(2, '0');
+            return `${pad(date.getDate())}${pad(date.getMonth() + 1)}${date.getFullYear()}`;
         }
 
         async function startProcess() {
@@ -47,100 +65,149 @@
             document.getElementById('logDisplay').innerHTML = '<div>> เริ่มต้นกระบวนการ...</div>';
 
             try {
-                // 1. ดึง URL จาก Settings
-                log("กำลังค้นหา Data URL...");
+                // 1. ดึง Base URL
                 const { data: settingData } = await sbClient.from(TAS_CONFIG.TABLE_SETTINGS)
                     .select('value').eq('key', 'data_url').single();
-
-                let externalData = [];
-                if (settingData && settingData.value) {
-                    log(`พบ URL: ${settingData.value}`);
-                    log("กำลังดาวน์โหลดข้อมูลภายนอก...");
-                    try {
-                        const res = await fetch(settingData.value);
-                        if(res.ok) externalData = await res.json();
-                        else log("❌ โหลด External Data ไม่สำเร็จ (ข้าม)");
-                    } catch(e) { log("❌ เชื่อมต่อ URL ไม่ได้ (ข้าม)"); }
-                } else {
-                    log("⚠️ ไม่พบ key='data_url' หรือไม่มีค่า (ข้าม)");
-                }
-                log(`ข้อมูลภายนอก: ${externalData.length} รายการ`);
-
-                // 2. ดึงข้อมูลจาก TimeStampPlus (ใน Supabase)
-                log("กำลังดึงข้อมูลจาก TimeStampPlus...");
-                const { data: internalData, error: errInt } = await sbClient
-                    .from(TAS_CONFIG.TABLE_SOURCE) // TimeStampPlus
-                    .select('*');
                 
-                if (errInt) throw errInt;
-                log(`ข้อมูลภายใน: ${internalData.length} รายการ`);
-
-                // 3. รวมข้อมูล (Merge Logic)
-                log("กำลังประมวลผลเปรียบเทียบเวลา...");
-                const mergedMap = {};
-
-                const processRecord = (record) => {
-                    // ใช้ Personnel_ID + Work_Date เป็นตัวจับคู่
-                    const key = `${record.personnel_id}_${record.work_date}`;
-
-                    if (!mergedMap[key]) {
-                        // ถ้ายังไม่มี ให้สร้างใหม่
-                        mergedMap[key] = {
-                            id: generateID(), // สร้าง ID ใหม่
-                            personnel_id: record.personnel_id,
-                            full_name: record.full_name || record.name,
-                            work_date: record.work_date,
-                            time_in: record.time_in,
-                            time_out: record.time_out
-                            // verified: จะเป็น 0 โดยอัตโนมัติตาม Default ของ DB
-                        };
-                    } else {
-                        // ถ้ามีแล้ว ให้เทียบเวลา (Merge)
-                        const current = mergedMap[key];
-
-                        // 1. เวลาเข้า: เอาอันที่ "น้อยกว่า" (เช้ากว่า)
-                        if (record.time_in) {
-                            if (!current.time_in || record.time_in < current.time_in) {
-                                current.time_in = record.time_in;
-                            }
-                        }
-
-                        // 2. เวลาออก: เอาอันที่ "มากกว่า" (ดึกกว่า/เย็นกว่า)
-                        if (record.time_out) {
-                            if (!current.time_out || record.time_out > current.time_out) {
-                                current.time_out = record.time_out;
-                            }
-                        }
-                    }
-                };
-
-                // ประมวลผลทั้ง 2 แหล่ง
-                externalData.forEach(rec => processRecord(rec));
-                internalData.forEach(rec => processRecord(rec));
-
-                const finalData = Object.values(mergedMap);
-                log(`สรุปข้อมูลสุทธิ: ${finalData.length} รายการ`);
-
-                // 4. บันทึกลง TimeStamp (Upsert)
-                if (finalData.length > 0) {
-                    log("กำลังบันทึก/อัปเดตลงตาราง TimeStamp...");
-                    
-                    // 🔥 Upsert โดยอ้างอิง personnel_id + work_date
-                    const { error: errUpsert } = await sbClient
-                        .from(TAS_CONFIG.TABLE_TARGET) // TimeStamp
-                        .upsert(finalData, { onConflict: 'personnel_id, work_date' });
-
-                    if (errUpsert) throw errUpsert;
-                    
-                    log("✅ บันทึกข้อมูลสำเร็จ!");
-                    Swal.fire('สำเร็จ', `อัปเดตข้อมูล ${finalData.length} รายการเรียบร้อย`, 'success');
-                } else {
-                    log("ไม่มีข้อมูลใหม่ให้บันทึก");
+                if (!settingData || !settingData.value) {
+                    throw new Error("ไม่พบ 'data_url' ในตาราง Settings");
                 }
+                const baseURL = settingData.value.endsWith('/') ? settingData.value : settingData.value + '/';
+                log(`Base URL: ${baseURL}`);
+
+                // 2. หาวันที่ล่าสุดใน TimeStamp
+                log("กำลังหาวันที่ล่าสุดในระบบ...");
+                const { data: latestRecord, error: errLatest } = await sbClient
+                    .from(TAS_CONFIG.TABLE_TARGET) // TimeStamp
+                    .select('work_date')
+                    .order('work_date', { ascending: false })
+                    .limit(1)
+                    .single();
+
+                let startDate = new Date();
+                if (latestRecord && latestRecord.work_date) {
+                    startDate = new Date(latestRecord.work_date);
+                    log(`📅 พบข้อมูลล่าสุดวันที่: ${formatDateDB(startDate)}`, 'highlight');
+                } else {
+                    log("⚠️ ไม่พบข้อมูลเก่า เริ่มประมวลผลจาก 'วันนี้'");
+                }
+
+                // 3. วนลูปจาก StartDate ถึง Today
+                const today = new Date();
+                today.setHours(0,0,0,0);
+                startDate.setHours(0,0,0,0);
+
+                // เริ่มลูป (Copy วันที่มาเพื่อไม่ให้กระทบตัวแปรหลัก)
+                let loopDate = new Date(startDate); 
+
+                while (loopDate <= today) {
+                    const dateDBStr = formatDateDB(loopDate);   // 2025-12-29
+                    const dateURLStr = formatDateURL(loopDate); // 29122025
+                    
+                    log(`-----------------------------------`);
+                    log(`⏳ กำลังประมวลผลวันที่: ${dateDBStr}...`, 'highlight');
+
+                    // --- 3.1 ดึงข้อมูลภายนอก (External) ---
+                    let externalData = [];
+                    const fullUrl = `${baseURL}${dateURLStr}`;
+                    // log(`   Request: ${fullUrl}`); // แสดง URL ที่ยิงไป
+                    
+                    try {
+                        const res = await fetch(fullUrl);
+                        if (res.ok) {
+                            externalData = await res.json();
+                            log(`   ✅ ข้อมูลภายนอก: พบ ${externalData.length} รายการ`);
+                        } else {
+                            log(`   ⚠️ โหลดข้อมูลภายนอกไม่สำเร็จ (Status: ${res.status})`);
+                        }
+                    } catch (e) {
+                        log(`   ❌ เชื่อมต่อ URL ไม่ได้ (ข้าม)`, 'error');
+                    }
+
+                    // --- 3.2 ดึงข้อมูลภายใน (TimeStampPlus) ---
+                    // เช็ค config ก่อน
+                    if (!TAS_CONFIG.TABLE_SOURCE) throw new Error("Config 'TABLE_SOURCE' เป็นค่าว่าง");
+
+                    const { data: internalData, error: errInt } = await sbClient
+                        .from(TAS_CONFIG.TABLE_SOURCE)
+                        .select('*')
+                        .eq('work_date', dateDBStr); // ดึงเฉพาะวันที่ลูปอยู่
+
+                    if (errInt) {
+                        log(`   ❌ ดึงข้อมูลภายในไม่ได้: ${errInt.message}`, 'error');
+                    } else {
+                        log(`   ✅ ข้อมูลภายใน (Web): พบ ${internalData.length} รายการ`);
+                    }
+
+                    // --- 3.3 รวมข้อมูล (Merge) ---
+                    const mergedMap = {};
+                    
+                    const processRecord = (rec) => {
+                        const key = `${rec.personnel_id}`; // ใช้รหัสพนักงานเป็น key (เพราะวันที่เหมือนกันอยู่แล้วในลูปนี้)
+                        if (!mergedMap[key]) {
+                            mergedMap[key] = {
+                                personnel_id: rec.personnel_id,
+                                full_name: rec.full_name || rec.name,
+                                work_date: dateDBStr, // ใช้วันที่ของลูป
+                                time_in: rec.time_in,
+                                time_out: rec.time_out
+                            };
+                        } else {
+                            const current = mergedMap[key];
+                            // Min Time In
+                            if (rec.time_in) {
+                                if (!current.time_in || rec.time_in < current.time_in) current.time_in = rec.time_in;
+                            }
+                            // Max Time Out
+                            if (rec.time_out) {
+                                if (!current.time_out || rec.time_out > current.time_out) current.time_out = rec.time_out;
+                            }
+                        }
+                    };
+
+                    // รวม 2 แหล่ง
+                    if (externalData.length > 0) externalData.forEach(processRecord);
+                    if (internalData && internalData.length > 0) internalData.forEach(processRecord);
+
+                    const finalData = Object.values(mergedMap);
+
+                    // --- 3.4 บันทึก (Upsert) ---
+                    if (finalData.length > 0) {
+                        // ต้องเติม ID ให้ครบก่อนบันทึก (สำหรับ TimeStamp table)
+                        const recordsToSave = finalData.map(item => ({
+                            id: generateID(), // สร้าง ID ใหม่ (แต่ถ้าซ้ำ unique key มันจะ update แทน)
+                            personnel_id: item.personnel_id,
+                            full_name: item.full_name,
+                            work_date: item.work_date,
+                            time_in: item.time_in,
+                            time_out: item.time_out,
+                            verified: 0
+                        }));
+
+                        const { error: errUpsert } = await sbClient
+                            .from(TAS_CONFIG.TABLE_TARGET)
+                            .upsert(recordsToSave, { onConflict: 'personnel_id, work_date' });
+
+                        if (errUpsert) {
+                            log(`   ❌ บันทึกไม่สำเร็จ: ${errUpsert.message}`, 'error');
+                        } else {
+                            log(`   💾 บันทึก/อัปเดตเรียบร้อย (${recordsToSave.length} รายการ)`);
+                        }
+                    } else {
+                        log(`   (ไม่มีข้อมูลใหม่ในวันนี้)`);
+                    }
+
+                    // ขยับไปวันถัดไป
+                    loopDate.setDate(loopDate.getDate() + 1);
+                } // End While Loop
+
+                log(`-----------------------------------`);
+                log(`✅✅ เสร็จสิ้นกระบวนการทั้งหมด!`, 'highlight');
+                Swal.fire('สำเร็จ', 'ประมวลผลข้อมูลครบถ้วนแล้ว', 'success');
 
             } catch (err) {
                 console.error(err);
-                log(`❌ Error: ${err.message}`);
+                log(`❌ Error: ${err.message}`, 'error');
                 Swal.fire('เกิดข้อผิดพลาด', err.message, 'error');
             } finally {
                 btn.disabled = false;
