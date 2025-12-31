@@ -22,7 +22,7 @@
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: 'Sarabun', sans-serif; background: var(--bg-gradient); min-height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; color: var(--text-main); }
         
-        .landing-card { background: white; width: 100%; max-width: 420px; padding: 40px 30px; border-radius: 24px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); text-align: center; animation: fadeIn Up 0.8s ease-out; position: relative; overflow: hidden; }
+        .landing-card { background: white; width: 100%; max-width: 420px; padding: 40px 30px; border-radius: 24px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); text-align: center; animation: fadeIn 0.8s ease-out; position: relative; overflow: hidden; }
         .landing-card::before { content: ''; position: absolute; top: -50px; left: -50px; width: 150px; height: 150px; background: linear-gradient(135deg, #818cf8, #c7d2fe); border-radius: 50%; opacity: 0.2; z-index: 0; }
         
         .logo-box { position: relative; width: 100px; height: 100px; background: linear-gradient(135deg, #4f46e5, #818cf8); border-radius: 24px; display: flex; align-items: center; justify-content: center; margin: 0 auto 25px; box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.3); z-index: 1; }
@@ -40,9 +40,8 @@
         .btn-start:hover { background: var(--primary-dark); transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.3); }
         .btn-start:active { transform: scale(0.98); }
 
-        /* ปุ่มติดตั้ง (Install Button) */
         .btn-install {
-            display: none; /* ซ่อนไว้ก่อน จะโชว์ด้วย JS */
+            display: none;
             align-items: center; justify-content: center; gap: 8px; width: 100%;
             background: white; color: var(--primary); border: 2px solid var(--primary);
             padding: 12px; border-radius: 16px; font-size: 1rem; font-weight: 600;
@@ -50,7 +49,6 @@
         }
         .btn-install:hover { background: var(--secondary); }
 
-        /* Modal สำหรับสอน iOS */
         .ios-prompt-overlay {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.6); z-index: 999; align-items: flex-end; justify-content: center;
@@ -58,12 +56,12 @@
         .ios-prompt-card {
             background: white; width: 100%; max-width: 400px; border-radius: 20px 20px 0 0;
             padding: 30px 20px; text-align: center; position: relative; animation: slideUp 0.3s ease-out;
-            padding-bottom: 40px; /* เผื่อพื้นที่ด้านล่างสำหรับ iPhone รุ่นใหม่ */
+            padding-bottom: 40px;
         }
         .ios-prompt-card::after {
             content: ''; position: absolute; bottom: -10px; left: 50%; transform: translateX(-50%);
             border-left: 10px solid transparent; border-right: 10px solid transparent;
-            border-top: 10px solid white; /* ลูกศรชี้ลงไปหาปุ่ม Share */
+            border-top: 10px solid white;
         }
         .ios-step { display: flex; align-items: center; gap: 15px; margin-bottom: 15px; text-align: left; font-size: 0.95rem; color: #333; }
         .ios-step i { font-size: 1.2rem; color: #007aff; width: 30px; text-align: center; }
@@ -115,6 +113,7 @@
                 <span>2. เลื่อนลงและเลือก <b>"เพิ่มไปยังหน้าจอโฮม"</b></span>
             </div>
             <div class="ios-step">
+                <i class="fas fa-plus"></i>
                 <span style="font-weight:bold; color:#007aff; margin-left:8px;">เพิ่ม</span>
                 <span>3. กดปุ่ม <b>"เพิ่ม"</b> ที่มุมขวาบน</span>
             </div>
@@ -122,38 +121,41 @@
     </div>
 
     <script>
+        // --- ส่วนตรวจสอบการจดจำรหัสผ่าน ---
+        document.addEventListener('DOMContentLoaded', () => {
+            const isRemembered = localStorage.getItem('tas_remember') === 'true';
+            const userData = localStorage.getItem('tas_user');
+
+            // หากเลือกจดจำและมีข้อมูลผู้ใช้ ให้เปลี่ยนหน้าไปยัง menu.html ทันที
+            if (isRemembered && userData) {
+                window.location.href = 'menu.html';
+            }
+        });
+
         // --- ส่วนจัดการปุ่มติดตั้ง ---
         let deferredPrompt;
         const installBtn = document.getElementById('installBtn');
         const iosPrompt = document.getElementById('iosPrompt');
 
-        // ตรวจสอบว่าเปิดในโหมด App หรือยัง
         const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
         const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
-        const isAndroid = /Android/.test(navigator.userAgent);
 
-        // ถ้ายังไม่ได้ติดตั้ง ให้แสดงปุ่ม
         if (!isStandalone) {
-            // กรณี Android: รอ Event 'beforeinstallprompt'
             window.addEventListener('beforeinstallprompt', (e) => {
                 e.preventDefault();
                 deferredPrompt = e;
-                installBtn.style.display = 'flex'; // โชว์ปุ่ม
+                installBtn.style.display = 'flex';
             });
 
-            // กรณี iOS: โชว์ปุ่มเสมอ (เพราะไม่มี event ตรวจสอบ)
             if (isIOS) {
                 installBtn.style.display = 'flex';
             }
         }
 
-        // ฟังก์ชันเมื่อกดปุ่มติดตั้ง
         function installApp() {
             if (isIOS) {
-                // ถ้าเป็น iOS ให้เปิดหน้าต่างสอนวิธีทำ
                 iosPrompt.style.display = 'flex';
             } else if (deferredPrompt) {
-                // ถ้าเป็น Android ให้เรียกคำสั่งติดตั้ง Native
                 deferredPrompt.prompt();
                 deferredPrompt.userChoice.then((choiceResult) => {
                     if (choiceResult.outcome === 'accepted') {
@@ -162,8 +164,7 @@
                     deferredPrompt = null;
                 });
             } else {
-                // กรณีอื่นๆ (เช่น PC)
-                alert('กรุณากดเมนูของเบราว์เซอร์แล้วเลือก "Install App" หรือ "Add to Home Screen"');
+                alert('กรุณากดเมนูของเบราว์เซอร์แล้วเลือก "Add to Home Screen"');
             }
         }
 
