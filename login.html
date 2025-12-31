@@ -123,20 +123,28 @@
 
                 if (isFirstTime) {
                     const { value: secret } = await Swal.fire({
-                        title: 'ยืนยันตัวตนครั้งแรก', text: 'ระบุ ชื่อ-นามสกุล เพื่อตั้งรหัสผ่านใหม่',
-                        input: 'text', inputPlaceholder: 'ชื่อ-นามสกุล (ตรงตามระบบ)', showCancelButton: true
+                        title: 'ยืนยันตัวตนครั้งแรก', 
+                        text: 'กรุณาระบุโค้ดลับ (ติดต่อ Admin เพื่อรับโค้ด)',
+                        input: 'text', 
+                        inputPlaceholder: 'กรอกโค้ดลับที่นี่...', 
+                        showCancelButton: true
                     });
+                    
+                    // ตรวจสอบกับฟิลด์ name ในฐานข้อมูล (ซึ่งทำหน้าที่เป็นโค้ดลับ)
                     if (secret === data.name) {
                         const { value: newPass } = await Swal.fire({
-                            title: 'ตั้งรหัสผ่านใหม่', input: 'password', inputPlaceholder: 'รหัสผ่านใหม่',
-                            confirmButtonText: 'บันทึกและเข้าสู่ระบบ', inputAttributes: { minlength: 4 },
+                            title: 'ตั้งรหัสผ่านใหม่', 
+                            input: 'password', 
+                            inputPlaceholder: 'รหัสผ่านใหม่',
+                            confirmButtonText: 'บันทึกและเข้าสู่ระบบ', 
+                            inputAttributes: { minlength: 4 },
                             inputValidator: (v) => { if (!v) return 'กรุณาระบุรหัสผ่าน'; }
                         });
                         if (newPass) {
                             await sbClient.from(TAS_CONFIG.TABLE_USER).update({ Password: newPass }).eq('personnel_id', user);
                             data.Password = newPass;
                         } else throw new Error("ยกเลิกการตั้งรหัสผ่าน");
-                    } else if (secret) throw new Error("ชื่อ-นามสกุล ไม่ถูกต้อง");
+                    } else if (secret) throw new Error("โค้ดลับไม่ถูกต้อง");
                     else { btn.disabled = false; btn.innerHTML = originalBtnContent; return; }
                 } else if (String(dbPass) !== String(pass)) throw new Error("รหัสผ่านไม่ถูกต้อง");
 
