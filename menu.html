@@ -4,111 +4,102 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>เมนูหลัก - TAS-SPB</title>
+    
     <link rel="icon" type="image/png" href="favicon.png">
     <link rel="apple-touch-icon" href="favicon.png">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
+
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script src="sweetalert2.js"></script>
+    <script src="supabase.js"></script>
+    <script src="config.js"></script>
+
     <style>
         :root { --primary: #4f46e5; --bg: #f8fafc; --white: #ffffff; --text: #1e293b; --muted: #64748b; }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: 'Sarabun', sans-serif; background-color: var(--bg); color: var(--text); padding: 15px; }
         .container { max-width: 500px; margin: 0 auto; }
 
-        /* Top Bar */
+        /* Top Bar พร้อม favicon */
         .top-bar { display: flex; align-items: center; padding: 10px 5px; margin-bottom: 20px; gap: 10px; }
-        .sys-icon { width: 32px; height: 32px; object-fit: contain; border-radius: 6px; }
+        .sys-icon { width: 32px; height: 32px; object-fit: contain; }
         .system-logo { font-weight: 800; font-size: 1.25rem; color: var(--primary); letter-spacing: -0.5px; }
 
-        /* Profile Menu Card */
+        /* Unified Profile Card */
         .profile-menu-card {
             background: linear-gradient(135deg, #6366f1 0%, #4338ca 100%);
             padding: 22px;
             border-radius: 24px;
             color: white;
-            text-decoration: none;
             display: flex;
             align-items: center;
-            justify-content: space-between; /* ปรับให้กระจายซ้าย-ขวา */
+            justify-content: space-between;
             gap: 15px;
             margin-bottom: 20px;
             box-shadow: 0 10px 20px -5px rgba(79, 70, 229, 0.4);
-            position: relative;
-            overflow: hidden;
         }
-        .profile-main-link { display: flex; align-items: center; gap: 15px; text-decoration: none; color: white; flex: 1; overflow: hidden; }
+        .profile-link { flex: 1; display: flex; align-items: center; gap: 15px; text-decoration: none; color: white; overflow: hidden; }
         .avatar-box { width: 55px; height: 55px; background: rgba(255,255,255,0.2); border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; flex-shrink: 0; }
         
-        /* จัดการชื่อให้อยู่ในบรรทัดเดียว */
-        .profile-info { overflow: hidden; flex: 1; }
+        /* บังคับชื่อบรรทัดเดียว */
+        .profile-info { overflow: hidden; }
         .profile-info h2 { 
             font-size: 1.15rem; font-weight: 700; margin-bottom: 2px;
-            white-space: nowrap; 
-            overflow: hidden; 
-            text-overflow: ellipsis; /* แสดง ... เมื่อชื่อยาวเกิน */
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; 
         }
         .profile-info p { font-size: 0.8rem; opacity: 0.85; }
 
-        /* ปุ่มออกจากระบบในโปรไฟล์ */
         .btn-logout-inline {
-            background: rgba(255, 0, 0, 0.25);
+            background: rgba(255, 255, 255, 0.2);
             border: 1px solid rgba(255, 255, 255, 0.3);
             color: white;
             width: 42px; height: 42px;
             border-radius: 12px;
             display: flex; align-items: center; justify-content: center;
             cursor: pointer; transition: 0.2s;
-            z-index: 5;
         }
-        .btn-logout-inline:active { transform: scale(0.9); background: rgba(255, 0, 0, 0.4); }
+        .btn-logout-inline:active { transform: scale(0.9); background: rgba(220, 38, 38, 0.5); }
 
         /* Grid Menu */
-        .admin-section-title { font-size: 0.85rem; font-weight: 700; color: var(--muted); margin: 25px 5px 12px; text-transform: uppercase; letter-spacing: 0.8px; }
+        .admin-section-title { font-size: 0.85rem; font-weight: 700; color: var(--muted); margin: 25px 5px 12px; text-transform: uppercase; }
         .grid-menu { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
         .menu-card { 
             background: var(--white); border-radius: 22px; padding: 22px 15px; text-align: center; 
             text-decoration: none; color: var(--text); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); 
-            display: flex; flex-direction: column; align-items: center; gap: 12px; transition: 0.2s;
+            display: flex; flex-direction: column; align-items: center; gap: 12px;
         }
-        .menu-card:active { transform: scale(0.95); }
         .icon-box { width: 50px; height: 50px; border-radius: 15px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; color: white; }
-        
         .c-process { background: #8b5cf6; }
         .c-report { background: #10b981; }
         .c-setting { background: #f59e0b; }
         .c-att { background: #ec4899; }
-        
-        .menu-title { font-weight: 700; font-size: 0.95rem; }
-        .version-text { text-align: center; margin-top: 40px; font-size: 0.7rem; color: var(--muted); opacity: 0.7; }
     </style>
-    <script src="supabase.js"></script>
-    <script src="config.js"></script>
 </head>
 <body>
     <div class="container">
         <div class="top-bar">
-            <img src="favicon.png" alt="Logo" class="sys-icon">
+            <img src="favicon.png" alt="Icon" class="sys-icon">
             <div class="system-logo">TAS-SPB <span style="font-weight:300; font-size: 1.1rem; opacity: 0.7;">Online</span></div>
         </div>
 
         <div class="profile-menu-card">
-            <a href="profile.html" class="profile-main-link">
+            <a href="profile.html" class="profile-link">
                 <div class="avatar-box">👤</div>
                 <div class="profile-info">
                     <h2 id="userName">กำลังโหลด...</h2>
-                    <p id="userStatus">รหัสบุคลากร: -</p>
+                    <p id="userStatus">รหัสพนักงาน: -</p>
                 </div>
-                <i class="fas fa-chevron-right" style="opacity: 0.5; font-size: 0.8rem; margin: 0 5px;"></i>
             </a>
-            
-            <button class="btn-logout-inline" onclick="logout()" title="ออกจากระบบ">
+            <button class="btn-logout-inline" onclick="logout()">
                 <i class="fas fa-sign-out-alt"></i>
             </button>
         </div>
 
         <div id="admin-area" style="display: none;">
-            <div class="admin-section-title">เมนูบริหารจัดการ</div>
+            <div class="admin-section-title">เครื่องมือดูแลระบบ</div>
             <div class="grid-menu">
                 <a href="process.html" class="menu-card">
                     <div class="icon-box c-process"><i class="fas fa-sync-alt"></i></div>
@@ -120,7 +111,7 @@
                 </a>
                 <a href="report.html" class="menu-card">
                     <div class="icon-box c-report"><i class="fas fa-file-export"></i></div>
-                    <div class="menu-title">รายงานสรุป</div>
+                    <div class="menu-title">สรุปรายงาน</div>
                 </a>
                 <a href="settings.html" class="menu-card">
                     <div class="icon-box c-setting"><i class="fas fa-tools"></i></div>
@@ -129,7 +120,7 @@
             </div>
         </div>
 
-        <div id="vText" class="version-text">TAS-SPB System</div>
+        <div id="vText" style="text-align:center; margin-top:40px; font-size:0.75rem; color:var(--muted);">TAS-SPB System</div>
     </div>
 
     <script>
@@ -139,38 +130,46 @@
             
             const user = JSON.parse(stored);
             document.getElementById('userName').innerText = user.name;
-            document.getElementById('userStatus').innerText = `รหัสบุคลากร: ${user.personnel_id}`;
+            document.getElementById('userStatus').innerText = `ID: ${user.personnel_id}`;
 
-            // แสดงส่วน Admin เฉพาะ Level 1
             if (String(user.level) === '1') {
                 document.getElementById('admin-area').style.display = 'block';
             }
 
-            // โหลดเวอร์ชันจาก DB
             try {
                 const { data } = await sbClient.from(TAS_CONFIG.TABLE_SETTINGS).select('value').eq('key', 'latest_version').single();
-                if (data) document.getElementById('vText').innerText = `TAS-SPB Version ${data.value}`;
+                if (data) document.getElementById('vText').innerText = `Version ${data.value}`;
             } catch (e) {}
         }
 
         function logout() {
-            Swal.fire({
-                title: 'ออกจากระบบ?',
-                text: "ท่านต้องการออกจากระบบลงเวลาใช่หรือไม่",
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#4f46e5',
-                cancelButtonColor: '#64748b',
-                confirmButtonText: 'ยืนยัน',
-                cancelButtonText: 'ยกเลิก',
-                reverseButtons: true
-            }).then((result) => {
-                if (result.isConfirmed) {
+            // ตรวจสอบว่า Swal พร้อมใช้งานหรือไม่
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    title: 'ออกจากระบบ?',
+                    text: "ต้องการปิดเซสชันการทำงานปัจจุบันหรือไม่",
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#4f46e5',
+                    cancelButtonColor: '#94a3b8',
+                    confirmButtonText: 'ยืนยัน',
+                    cancelButtonText: 'ยกเลิก',
+                    reverseButtons: true
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        localStorage.removeItem('tas_user');
+                        localStorage.removeItem('tas_remember');
+                        window.location.href = 'login.html';
+                    }
+                });
+            } else {
+                // Fallback กรณี Swal โหลดไม่สำเร็จ
+                if (confirm("ยืนยันการออกจากระบบ?")) {
                     localStorage.removeItem('tas_user');
                     localStorage.removeItem('tas_remember');
                     window.location.href = 'login.html';
                 }
-            });
+            }
         }
 
         initMenu();
