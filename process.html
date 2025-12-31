@@ -1,258 +1,640 @@
 <!DOCTYPE html>
 <html lang="th">
-<head>
-    <meta charset="UTF-8">
-    <title>ประมวลผลเวลา - TAS-SPB</title>
-    <link rel="icon" type="image/png" href="favicon.png">
-    <style>
-        body { font-family: 'Sarabun', sans-serif; background: #f8fafc; padding: 20px; display: flex; flex-direction: column; align-items: center; }
-        .container { width: 100%; max-width: 700px; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); text-align: center; }
-        .btn-process { background: linear-gradient(135deg, #8b5cf6, #6366f1); color: white; border: none; padding: 15px 30px; border-radius: 30px; font-size: 1.2rem; font-weight: bold; cursor: pointer; margin: 20px 0; box-shadow: 0 4px 6px rgba(99, 102, 241, 0.3); transition: transform 0.2s; }
-        .btn-process:active { transform: scale(0.95); }
-        .btn-process:disabled { background: #cbd5e1; cursor: not-allowed; }
-        .log-box { text-align: left; background: #1e293b; color: #10b981; border-radius: 10px; padding: 15px; height: 350px; overflow-y: auto; font-family: monospace; font-size: 0.9rem; border: 1px solid #e2e8f0; }
-        .back-btn { text-decoration: none; color: #64748b; font-weight: bold; display: inline-block; margin-bottom: 20px; }
-        .highlight { color: #fbbf24; } 
-        .error { color: #ef4444; } 
-        .info { color: #60a5fa; }
-    </style>
-    
-    <script src="supabase.js"></script>
-    <script src="sweetalert2.js"></script>
-    <script src="config.js"></script>
-</head>
-<body>
-    <a href="menu.html" class="back-btn">⬅ กลับเมนูหลัก</a>
 
-    <div class="container">
-        <h2>🔄 ระบบดึงข้อมูลจากตาราง HTML</h2>
-        <p>ระบบจะดึงข้อมูลจากหน้าเว็บรายงาน (HTTP) <br>และนำมารวมกับข้อมูลที่กดผ่านเว็บ</p>
-        
-        <button id="btnStart" class="btn-process" onclick="startProcess()">🚀 เริ่มการประมวลผล</button>
-        
-        <div class="log-box" id="logDisplay">
-            > รอคำสั่งเริ่มทำงาน...
-        </div>
-    </div>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+        <title>ประมวลผลข้อมูล (Process)</title>
+        <link rel="icon" type="image/png" href="favicon.png">
+        <link rel="apple-touch-icon" href="favicon.png">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-status-bar-style" content="default">
+        <meta name="apple-mobile-web-app-title" content="TAS-SPB">
 
-    <script>
-        const user = checkAuth();
+        <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap"
+            rel="stylesheet">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-        function log(msg, type = 'normal') {
-            const box = document.getElementById('logDisplay');
-            let colorClass = '';
-            if(type === 'highlight') colorClass = 'class="highlight"';
-            if(type === 'error') colorClass = 'class="error"';
-            if(type === 'info') colorClass = 'class="info"';
-            
-            box.innerHTML += `<div ${colorClass}>> ${msg}</div>`;
-            box.scrollTop = box.scrollHeight;
-        }
-
-        function formatDateDB(date) {
-            const pad = (n) => String(n).padStart(2, '0');
-            return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
-        }
-
-        // รูปแบบ URL วันที่ DDMMYYYY
-        function formatDateURL(date) {
-            const pad = (n) => String(n).padStart(2, '0');
-            return `${pad(date.getDate())}${pad(date.getMonth() + 1)}${date.getFullYear()}`;
-        }
-
-        // 🔥 ฟังก์ชันแปลง HTML เป็นข้อมูล (Scraping Logic)
-        function parseHTMLTable(htmlString, dateStr) {
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(htmlString, "text/html");
-            const table = doc.getElementById('mainTable');
-            const records = [];
-
-            if (!table) return [];
-
-            const rows = table.querySelectorAll('tbody tr');
-            rows.forEach(row => {
-                const cols = row.querySelectorAll('td');
-                if (cols.length >= 4) {
-                    const pid = cols[0].innerText.trim();
-                    const name = cols[1].innerText.trim();
-                    let t_in = cols[2].innerText.trim();
-                    let t_out = cols[3].innerText.trim();
-
-                    // แปลงเวลาว่างให้เป็น null (หรือข้าม)
-                    if(t_in === "" || t_in === "-") t_in = null;
-                    else if(t_in.length === 5) t_in += ":00"; // 08:30 -> 08:30:00
-
-                    if(t_out === "" || t_out === "-") t_out = null;
-                    else if(t_out.length === 5) t_out += ":00";
-
-                    if (pid) {
-                        records.push({
-                            personnel_id: pid,
-                            full_name: name,
-                            work_date: dateStr, // ใช้วันที่จาก Loop
-                            time_in: t_in,
-                            time_out: t_out
-                        });
-                    }
-                }
-            });
-            return records;
-        }
-
-        async function startProcess() {
-            const btn = document.getElementById('btnStart');
-            btn.disabled = true;
-            document.getElementById('logDisplay').innerHTML = '<div>> เริ่มต้นกระบวนการ...</div>';
-
-            try {
-                // 1. ดึง Base URL จาก Settings
-                const { data: settingData } = await sbClient.from(TAS_CONFIG.TABLE_SETTINGS)
-                    .select('value').eq('key', 'data_url').single();
-                
-                let baseURL = "";
-                // ถ้าค่าใน DB เป็น https://att4... ให้ใช้ได้เลย แต่ถ้าเป็น http ต้องผ่าน proxy
-                if (settingData && settingData.value) {
-                    // ตัดส่วน proxy เก่าออกถ้ามี เหลือแค่ url ดิบ
-                    let rawUrl = settingData.value.replace("https://api.allorigins.win/raw?url=", "");
-                    // บังคับใช้ Proxy เสมอ เพราะเป้าหมายเป็น HTTP
-                    baseURL = `https://api.allorigins.win/get?url=${encodeURIComponent(rawUrl)}`;
-                    log(`Proxy URL: ${baseURL}...`, 'info');
-                } else {
-                    log("⚠️ ไม่พบ data_url ใน Settings (จะข้ามการดึงเว็บนอก)");
-                }
-
-                // 2. หาวันที่ล่าสุด
-                log("กำลังหาวันที่ล่าสุดในระบบ...");
-                const { data: latestRecord } = await sbClient.from(TAS_CONFIG.TABLE_TARGET)
-                    .select('work_date').order('work_date', { ascending: false }).limit(1).single();
-
-                let startDate = new Date();
-                if (latestRecord && latestRecord.work_date) {
-                    startDate = new Date(latestRecord.work_date);
-                    log(`📅 พบข้อมูลล่าสุดวันที่: ${formatDateDB(startDate)}`, 'highlight');
-                } else {
-                    log("⚠️ ไม่พบข้อมูลเก่า เริ่มประมวลผลจาก 'วันนี้'");
-                }
-
-                // 3. วนลูป
-                const today = new Date();
-                today.setHours(0,0,0,0);
-                startDate.setHours(0,0,0,0);
-                let loopDate = new Date(startDate); 
-
-                while (loopDate <= today) {
-                    const dateDBStr = formatDateDB(loopDate);   // YYYY-MM-DD
-                    const dateURLPart = formatDateURL(loopDate); // DDMMYYYY
-                    
-                    log(`-----------------------------------`);
-                    log(`⏳ กำลังประมวลผลวันที่: ${dateDBStr} ...`, 'highlight');
-
-                    // 3.1 ดึง Web นอก (ผ่าน Proxy & Parse HTML)
-                    let externalData = [];
-                    if (baseURL) {
-                        try {
-                            // สร้าง URL ปลายทางที่ถูกต้อง (ต้องระวังเรื่อง / ท้าย url)
-                            // ตัวอย่าง Base ใน DB: http://att4.doomdns.com/rp/SPWTQtSA/
-                            // เป้าหมาย: http://att4.doomdns.com/rp/SPWTQtSA/29122025
-                            
-                            // ดึง URL ดิบจาก Setting อีกครั้งเพื่อความชัวร์
-                            let cleanBase = settingData.value;
-                            if(cleanBase.includes("allorigins")) {
-                                // ถ้า user เผลอใส่ proxy ไปใน db ให้แกะออกก่อน
-                                const match = cleanBase.match(/url=(.*)/);
-                                if(match) cleanBase = decodeURIComponent(match[1]);
-                            }
-                            if(!cleanBase.endsWith('/')) cleanBase += '/';
-
-                            const targetUrl = `${cleanBase}${dateURLPart}`;
-                            const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`;
-                            
-                            // log(`   Target: ${targetUrl}`);
-                            const res = await fetch(proxyUrl);
-                            if (res.ok) {
-                                const jsonRes = await res.json(); // AllOrigins คืนค่าเป็น JSON ที่มี contents
-                                const htmlContent = jsonRes.contents; // นี่คือ HTML ดิบๆ
-                                
-                                // ส่งไปแกะข้อมูลจากตาราง
-                                externalData = parseHTMLTable(htmlContent, dateDBStr);
-                                log(`   ✅ ข้อมูลจากตาราง HTML: พบ ${externalData.length} รายการ`, 'info');
-                            } else {
-                                log(`   ⚠️ Proxy เชื่อมต่อไม่ได้ (Status: ${res.status})`);
-                            }
-                        } catch (e) {
-                            console.error(e);
-                            log(`   ❌ ดึงเว็บนอกล้มเหลว (อาจไม่มีรายงานวันนี้)`, 'error');
-                        }
-                    }
-
-                    // 3.2 ดึง DB ภายใน
-                    const { data: internalData } = await sbClient
-                        .from(TAS_CONFIG.TABLE_SOURCE).select('*').eq('work_date', dateDBStr);
-                    
-                    log(`   ✅ ข้อมูลภายใน (Web): พบ ${internalData ? internalData.length : 0} รายการ`);
-
-                    // 3.3 รวมข้อมูล (Merge)
-                    const mergedMap = {};
-                    const processRecord = (rec) => {
-                        const pid = rec.personnel_id;
-                        if (!mergedMap[pid]) {
-                            mergedMap[pid] = {
-                                personnel_id: pid,
-                                full_name: rec.full_name || rec.name,
-                                work_date: dateDBStr,
-                                time_in: rec.time_in,
-                                time_out: rec.time_out
-                            };
-                        } else {
-                            const current = mergedMap[pid];
-                            // Logic: เช้าสุด / ดึกสุด
-                            if (rec.time_in && (!current.time_in || rec.time_in < current.time_in)) current.time_in = rec.time_in;
-                            if (rec.time_out && (!current.time_out || rec.time_out > current.time_out)) current.time_out = rec.time_out;
-                        }
-                    };
-
-                    if (externalData.length > 0) externalData.forEach(processRecord);
-                    if (internalData && internalData.length > 0) internalData.forEach(processRecord);
-
-                    const finalData = Object.values(mergedMap);
-
-                    // 3.4 บันทึก
-                    if (finalData.length > 0) {
-                        const recordsToSave = finalData.map(item => ({
-                            id: `${dateURLPart}${item.personnel_id}`, // ID สูตร: DDMMYYYY + ID
-                            personnel_id: item.personnel_id,
-                            full_name: item.full_name,
-                            work_date: item.work_date,
-                            time_in: item.time_in,
-                            time_out: item.time_out,
-                            verified: 0
-                        }));
-
-                        const { error: errUpsert } = await sbClient
-                            .from(TAS_CONFIG.TABLE_TARGET)
-                            .upsert(recordsToSave, { onConflict: 'personnel_id, work_date' });
-
-                        if (errUpsert) log(`   ❌ บันทึกไม่สำเร็จ: ${errUpsert.message}`, 'error');
-                        else log(`   💾 บันทึกเรียบร้อย (${recordsToSave.length} รายการ)`);
-                    } else {
-                        log(`   (ไม่มีข้อมูลใหม่ในวันนี้)`);
-                    }
-
-                    loopDate.setDate(loopDate.getDate() + 1);
-                }
-
-                log(`-----------------------------------`);
-                log(`✅✅ เสร็จสิ้นกระบวนการทั้งหมด!`, 'highlight');
-                Swal.fire('สำเร็จ', 'ดึงข้อมูลจากตาราง HTML เรียบร้อย', 'success');
-
-            } catch (err) {
-                console.error(err);
-                log(`❌ Error: ${err.message}`, 'error');
-                Swal.fire('เกิดข้อผิดพลาด', err.message, 'error');
-            } finally {
-                btn.disabled = false;
+        <style>
+            :root {
+                --primary: #6366f1;
+                --primary-dark: #4f46e5;
+                --success: #10b981;
+                --warning: #f59e0b;
+                --danger: #ef4444;
+                --bg-body: #f1f5f9;
+                --bg-card: #ffffff;
+                --text-main: #1e293b;
+                --text-muted: #64748b;
+                --terminal-bg: #1e293b;
+                --terminal-text: #e2e8f0;
             }
-        }
-    </script>
-</body>
+
+            * {
+                box-sizing: border-box;
+            }
+
+            body {
+                font-family: 'Sarabun', sans-serif;
+                background-color: var(--bg-body);
+                color: var(--text-main);
+                margin: 0;
+                padding: 15px;
+                min-height: 100vh;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .container {
+                width: 100%;
+                max-width: 750px;
+                margin: 0 auto;
+            }
+
+            /* Header Card */
+            .header-card {
+                background: var(--bg-card);
+                padding: 20px;
+                border-radius: 16px;
+                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+                margin-bottom: 20px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                flex-wrap: wrap;
+                gap: 15px;
+            }
+
+            .header-info {
+                display: flex;
+                align-items: center;
+                gap: 15px;
+            }
+
+            .icon-box {
+                width: 50px;
+                height: 50px;
+                background: linear-gradient(135deg, #a855f7, #6366f1);
+                border-radius: 12px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: white;
+                font-size: 1.5rem;
+                flex-shrink: 0;
+            }
+
+            .header-text h2 {
+                margin: 0;
+                font-size: 1.25rem;
+                font-weight: 700;
+                color: var(--text-main);
+            }
+
+            .header-text p {
+                margin: 5px 0 0;
+                font-size: 0.9rem;
+                color: var(--text-muted);
+            }
+
+            .back-btn {
+                background: #f8fafc;
+                color: var(--text-muted);
+                text-decoration: none;
+                padding: 8px 16px;
+                border-radius: 30px;
+                font-weight: 600;
+                font-size: 0.9rem;
+                border: 1px solid #e2e8f0;
+                transition: all 0.2s;
+                display: flex;
+                align-items: center;
+                gap: 5px;
+            }
+
+            .back-btn:hover {
+                background: #e2e8f0;
+                color: var(--text-main);
+            }
+
+            /* Action Area */
+            .action-card {
+                background: var(--bg-card);
+                padding: 30px 20px;
+                border-radius: 16px;
+                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+                text-align: center;
+                margin-bottom: 20px;
+            }
+
+            /* Options Box */
+            .options-box {
+                background: #f1f5f9;
+                padding: 15px;
+                border-radius: 10px;
+                display: inline-block;
+                text-align: left;
+                margin-bottom: 20px;
+                border: 1px solid #e2e8f0;
+                width: 100%;
+                max-width: 400px;
+            }
+
+            .radio-group {
+                margin-bottom: 8px;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+
+            .radio-group label {
+                cursor: pointer;
+                font-weight: 500;
+                color: #334155;
+            }
+
+            input[type="date"] {
+                font-family: 'Sarabun', sans-serif;
+                padding: 5px 10px;
+                border: 1px solid #cbd5e1;
+                border-radius: 6px;
+                color: #334155;
+                outline: none;
+            }
+
+            input[type="date"]:disabled {
+                background: #e2e8f0;
+                color: #94a3b8;
+                cursor: not-allowed;
+            }
+
+            .btn-process {
+                background: linear-gradient(135deg, #8b5cf6, #6366f1);
+                color: white;
+                border: none;
+                padding: 15px 40px;
+                border-radius: 50px;
+                font-size: 1.1rem;
+                font-weight: 700;
+                cursor: pointer;
+                box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
+                transition: transform 0.2s, box-shadow 0.2s;
+                display: inline-flex;
+                align-items: center;
+                gap: 10px;
+            }
+
+            .btn-process:active {
+                transform: scale(0.96);
+            }
+
+            .btn-process:disabled {
+                background: #cbd5e1;
+                cursor: not-allowed;
+                box-shadow: none;
+            }
+
+            /* Terminal Log */
+            .log-container {
+                background: var(--terminal-bg);
+                border-radius: 16px;
+                box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+                overflow: hidden;
+                display: flex;
+                flex-direction: column;
+                height: 400px;
+                border: 1px solid #334155;
+            }
+
+            .log-header {
+                background: #0f172a;
+                padding: 10px 15px;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                border-bottom: 1px solid #334155;
+            }
+
+            .dot {
+                width: 10px;
+                height: 10px;
+                border-radius: 50%;
+            }
+
+            .dot-red {
+                background: #ef4444;
+            }
+
+            .dot-yellow {
+                background: #f59e0b;
+            }
+
+            .dot-green {
+                background: #22c55e;
+            }
+
+            .log-title {
+                color: #94a3b8;
+                font-size: 0.8rem;
+                font-family: monospace;
+                margin-left: 10px;
+            }
+
+            .log-content {
+                flex: 1;
+                padding: 15px;
+                overflow-y: auto;
+                font-family: 'Courier New', monospace;
+                font-size: 0.9rem;
+                color: var(--terminal-text);
+                line-height: 1.6;
+            }
+
+            .log-line {
+                margin-bottom: 5px;
+                display: flex;
+                gap: 8px;
+            }
+
+            .log-time {
+                color: #64748b;
+                font-size: 0.8rem;
+                min-width: 60px;
+            }
+
+            .msg-normal {
+                color: #e2e8f0;
+            }
+
+            .msg-highlight {
+                color: #fbbf24;
+                font-weight: bold;
+            }
+
+            .msg-success {
+                color: #34d399;
+            }
+
+            .msg-error {
+                color: #f87171;
+            }
+
+            .msg-info {
+                color: #60a5fa;
+            }
+
+            @media (max-width: 600px) {
+                .header-card {
+                    flex-direction: column;
+                    text-align: center;
+                }
+
+                .header-info {
+                    flex-direction: column;
+                }
+
+                .back-btn {
+                    width: 100%;
+                    justify-content: center;
+                }
+
+                .btn-process {
+                    width: 100%;
+                    justify-content: center;
+                }
+
+                .options-box {
+                    width: 100%;
+                    max-width: 100%;
+                }
+            }
+        </style>
+
+        <script src="supabase.js"></script>
+        <script src="sweetalert2.js"></script>
+        <script src="config.js"></script>
+    </head>
+
+    <body>
+
+        <div class="container">
+            <div class="header-card">
+                <div class="header-info">
+                    <div class="icon-box"><i class="fas fa-sync-alt"></i></div>
+                    <div class="header-text">
+                        <h2>ระบบประมวลผลข้อมูล</h2>
+                        <p>ดึงข้อมูลจากเว็บรายงาน + รวมกับข้อมูลในระบบ</p>
+                    </div>
+                </div>
+                <a href="menu.html" class="back-btn">
+                    <i class="fas fa-arrow-left"></i> กลับเมนูหลัก
+                </a>
+            </div>
+
+            <div class="action-card">
+                <div class="options-box">
+                    <div class="radio-group">
+                        <input type="radio" id="modeAuto" name="syncMode" value="auto" checked onchange="toggleMode()">
+                        <label for="modeAuto">ซิงค์ต่อเนื่อง (จากข้อมูลล่าสุด - ปัจจุบัน)</label>
+                    </div>
+                    <div class="radio-group">
+                        <input type="radio" id="modeDate" name="syncMode" value="date" onchange="toggleMode()">
+                        <label for="modeDate">เลือกวันที่เฉพาะ:</label>
+                        <input type="date" id="selectDate" disabled>
+                    </div>
+                </div>
+
+                <br>
+
+                <button id="btnStart" class="btn-process" onclick="startProcess()">
+                    <i class="fas fa-rocket"></i> เริ่มการประมวลผล
+                </button>
+                <p style="margin-top: 15px; font-size: 0.9rem; color: #64748b;">
+                    ระบบจะทำการดึงข้อมูลตามเงื่อนไขที่ท่านเลือก<br>และอัปเดตลงฐานข้อมูล
+                </p>
+            </div>
+
+            <div class="log-container">
+                <div class="log-header">
+                    <div class="dot dot-red"></div>
+                    <div class="dot dot-yellow"></div>
+                    <div class="dot dot-green"></div>
+                    <span class="log-title">system_process.log</span>
+                </div>
+                <div class="log-content" id="logDisplay">
+                    <div class="log-line">
+                        <span class="log-time">--:--:--</span>
+                        <span class="msg-normal">Ready to start...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            const user = checkAuth();
+
+            // ตั้งค่าวันที่ปัจจุบันให้ Date Input
+            document.addEventListener('DOMContentLoaded', () => {
+                document.getElementById('selectDate').valueAsDate = new Date();
+            });
+
+            function toggleMode() {
+                const isDateMode = document.getElementById('modeDate').checked;
+                const dateInput = document.getElementById('selectDate');
+                dateInput.disabled = !isDateMode;
+                if (isDateMode) dateInput.focus();
+            }
+
+            function log(msg, type = 'normal') {
+                const box = document.getElementById('logDisplay');
+                const now = new Date();
+                const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+
+                let cssClass = 'msg-normal';
+                if (type === 'highlight') cssClass = 'msg-highlight';
+                if (type === 'success') cssClass = 'msg-success';
+                if (type === 'error') cssClass = 'msg-error';
+                if (type === 'info') cssClass = 'msg-info';
+
+                const line = document.createElement('div');
+                line.className = 'log-line';
+                line.innerHTML = `<span class="log-time">${timeStr}</span><span class="${cssClass}">${msg}</span>`;
+
+                box.appendChild(line);
+                box.scrollTop = box.scrollHeight;
+            }
+
+            function formatDateDB(date) {
+                const pad = (n) => String(n).padStart(2, '0');
+                return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+            }
+
+            function formatDateURL(date) {
+                const pad = (n) => String(n).padStart(2, '0');
+                return `${pad(date.getDate())}${pad(date.getMonth() + 1)}${date.getFullYear()}`;
+            }
+
+            function parseHTMLTable(htmlString, dateStr) {
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(htmlString, "text/html");
+                const table = doc.getElementById('mainTable');
+                const records = [];
+
+                if (!table) return [];
+
+                const rows = table.querySelectorAll('tbody tr');
+                rows.forEach(row => {
+                    const cols = row.querySelectorAll('td');
+                    if (cols.length >= 4) {
+                        const pid = cols[0].innerText.trim();
+                        const name = cols[1].innerText.trim();
+                        let t_in = cols[2].innerText.trim();
+                        let t_out = cols[3].innerText.trim();
+
+                        if (t_in === "" || t_in === "-") t_in = null;
+                        else if (t_in.length === 5) t_in += ":00";
+
+                        if (t_out === "" || t_out === "-") t_out = null;
+                        else if (t_out.length === 5) t_out += ":00";
+
+                        if (pid) {
+                            records.push({
+                                personnel_id: pid,
+                                full_name: name,
+                                work_date: dateStr,
+                                time_in: t_in,
+                                time_out: t_out
+                            });
+                        }
+                    }
+                });
+                return records;
+            }
+
+            async function startProcess() {
+                const btn = document.getElementById('btnStart');
+                const mode = document.querySelector('input[name="syncMode"]:checked').value;
+
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> กำลังทำงาน...';
+                document.getElementById('logDisplay').innerHTML = '';
+
+                let startDate, endDate;
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+
+                try {
+                    // --- คำนวณช่วงวันที่ (Logic ใหม่) ---
+                    if (mode === 'date') {
+                        const dateVal = document.getElementById('selectDate').value;
+                        if (!dateVal) throw new Error("กรุณาเลือกวันที่ที่ต้องการซิงค์");
+                        startDate = new Date(dateVal);
+                        endDate = new Date(dateVal);
+                    } else {
+                        // โหมด Auto: หาจาก DB ล่าสุด
+                        log('Checking latest record in database...', 'normal');
+
+                        const { data: latestRecord, error } = await sbClient
+                            .from(TAS_CONFIG.TABLE_TARGET)
+                            .select('work_date')
+                            .order('work_date', { ascending: false })
+                            .limit(1)
+                            .single();
+
+                        if (latestRecord && latestRecord.work_date) {
+                            startDate = new Date(latestRecord.work_date);
+                            log(`Found latest record: ${formatDateDB(startDate)}`, 'success');
+                        } else {
+                            // ถ้าไม่เคยมีข้อมูลเลย ให้ย้อนหลัง 30 วันเป็นค่าเริ่มต้น
+                            startDate = new Date();
+                            startDate.setDate(startDate.getDate() - 30);
+                            log(`No previous data found. Defaulting to last 30 days.`, 'warning');
+                        }
+
+                        endDate = new Date(); // ถึงวันนี้
+                    }
+
+                    // Reset Time
+                    startDate.setHours(0, 0, 0, 0);
+                    endDate.setHours(0, 0, 0, 0);
+
+                    log(`Starting process... Mode: ${mode === 'date' ? 'Specific Date' : 'Continuous Sync'}`, 'highlight');
+                    log(`Range: ${formatDateDB(startDate)} to ${formatDateDB(endDate)}`, 'highlight');
+
+                    // --- โหลด Config ---
+                    const { data: settingData } = await sbClient.from(TAS_CONFIG.TABLE_SETTINGS)
+                        .select('value').eq('key', 'data_url').single();
+
+                    let baseURL = "";
+                    if (settingData && settingData.value) {
+                        let rawUrl = settingData.value.replace("https://api.allorigins.win/raw?url=", "");
+                        baseURL = `https://api.allorigins.win/get?url=${encodeURIComponent(rawUrl)}`;
+                        log('Proxy configuration loaded.', 'info');
+                    } else {
+                        log('⚠️ Warning: Data URL not found in settings.');
+                    }
+
+                    // --- Loop Process ---
+                    let loopDate = new Date(startDate);
+
+                    while (loopDate <= endDate) {
+                        const dateDBStr = formatDateDB(loopDate);
+                        const dateURLPart = formatDateURL(loopDate);
+
+                        log(`-----------------------------------`, 'normal');
+                        log(`Processing Date: ${dateDBStr}`, 'highlight');
+
+                        // 3.1 Fetch External HTML
+                        let externalData = [];
+                        if (baseURL) {
+                            try {
+                                let cleanBase = settingData.value;
+                                if (cleanBase.includes("allorigins")) {
+                                    const match = cleanBase.match(/url=(.*)/);
+                                    if (match) cleanBase = decodeURIComponent(match[1]);
+                                }
+                                if (!cleanBase.endsWith('/')) cleanBase += '/';
+
+                                const targetUrl = `${cleanBase}${dateURLPart}`;
+                                const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`;
+
+                                const res = await fetch(proxyUrl);
+                                if (res.ok) {
+                                    const jsonRes = await res.json();
+                                    externalData = parseHTMLTable(jsonRes.contents, dateDBStr);
+                                    log(`   HTML Source: Found ${externalData.length} records`, 'success');
+                                } else {
+                                    log(`   HTML Source: Connection failed (${res.status})`, 'error');
+                                }
+                            } catch (e) {
+                                log(`   HTML Source: Fetch Error`, 'error');
+                            }
+                        }
+
+                        // 3.2 Fetch Internal DB
+                        const { data: internalData, error: internalError } = await sbClient
+                            .from(TAS_CONFIG.TABLE_TARGET)
+                            .select('*')
+                            .eq('work_date', dateDBStr);
+
+                        if (internalError) throw new Error(internalError.message);
+
+                        log(`   Internal DB: Found ${internalData ? internalData.length : 0} records`, 'info');
+
+                        // 3.3 Merge Logic
+                        const mergedMap = {};
+                        const processRecord = (rec) => {
+                            const pid = rec.personnel_id;
+                            if (!mergedMap[pid]) {
+                                mergedMap[pid] = {
+                                    personnel_id: pid,
+                                    full_name: rec.full_name || rec.name,
+                                    work_date: dateDBStr,
+                                    time_in: rec.time_in,
+                                    time_out: rec.time_out
+                                };
+                            } else {
+                                const current = mergedMap[pid];
+                                if (rec.time_in && (!current.time_in || rec.time_in < current.time_in)) current.time_in = rec.time_in;
+                                if (rec.time_out && (!current.time_out || rec.time_out > current.time_out)) current.time_out = rec.time_out;
+                            }
+                        };
+
+                        if (externalData.length > 0) externalData.forEach(processRecord);
+                        if (internalData && internalData.length > 0) internalData.forEach(processRecord);
+
+                        const finalData = Object.values(mergedMap);
+
+                        // 3.4 Upsert
+                        if (finalData.length > 0) {
+                            const recordsToSave = finalData.map(item => ({
+                                id: `${dateURLPart}${item.personnel_id}`,
+                                personnel_id: item.personnel_id,
+                                full_name: item.full_name,
+                                work_date: item.work_date,
+                                time_in: item.time_in,
+                                time_out: item.time_out,
+                                verified: 0
+                            }));
+
+                            const { error: errUpsert } = await sbClient
+                                .from(TAS_CONFIG.TABLE_TARGET)
+                                .upsert(recordsToSave, { onConflict: 'personnel_id, work_date' });
+
+                            if (errUpsert) log(`   Save Error: ${errUpsert.message}`, 'error');
+                            else log(`   Database: Updated ${recordsToSave.length} records successfully`, 'success');
+                        } else {
+                            log(`   No data to update.`, 'normal');
+                        }
+
+                        loopDate.setDate(loopDate.getDate() + 1);
+                    }
+
+                    log(`-----------------------------------`, 'normal');
+                    log(`ALL DONE! Process completed successfully.`, 'success');
+
+                    await Swal.fire({
+                        icon: 'success',
+                        title: 'เสร็จสิ้น!',
+                        text: 'กระบวนการดึงและรวมข้อมูลเสร็จสมบูรณ์',
+                        confirmButtonColor: '#6366f1'
+                    });
+
+                } catch (err) {
+                    console.error(err);
+                    log(`CRITICAL ERROR: ${err.message}`, 'error');
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'เกิดข้อผิดพลาด',
+                        text: err.message
+                    });
+                } finally {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-rocket"></i> เริ่มการประมวลผล';
+                }
+            }
+        </script>
+    </body>
+
 </html>

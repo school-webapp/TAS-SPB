@@ -1,110 +1,357 @@
 <!DOCTYPE html>
 <html lang="th">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>เข้าสู่ระบบ - TAS-SPB</title>
-    <link rel="icon" type="image/png" href="favicon.png">
-    
-    <style>
-        body { font-family: 'Sarabun', sans-serif; background: #e0e7ff; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .card { background: white; padding: 2.5rem; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 100%; max-width: 380px; text-align: center; }
-        .app-logo { font-size: 3rem; margin-bottom: 10px; display: block; }
-        h2 { color: #1f2937; margin-bottom: 2rem; }
-        input { width: 100%; padding: 0.8rem; margin-bottom: 1rem; border: 1px solid #d1d5db; border-radius: 10px; box-sizing: border-box; font-size: 1rem; }
-        button { width: 100%; padding: 0.9rem; background-color: #4f46e5; color: white; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; transition: 0.3s; }
-        button:hover { background-color: #4338ca; }
-    </style>
 
-    <script src="supabase.js"></script>
-    <script src="sweetalert2.js"></script>
-    <script src="config.js"></script>
-</head>
-<body>
-    <div class="card">
-        <span class="app-logo">🏫</span>
-        <h2>ระบบลงเวลา TAS-SPB</h2>
-        <form id="loginForm">
-            <input type="text" id="username" placeholder="รหัสพนักงาน" required>
-            <input type="password" id="password" placeholder="รหัสผ่าน" required>
-            <button type="submit" id="btnSubmit">เข้าสู่ระบบ</button>
-        </form>
-    </div>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+        <title>เข้าสู่ระบบ - TAS-SPB</title>
+        <link rel="icon" type="image/png" href="favicon.png">
+        <link rel="apple-touch-icon" href="favicon.png">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-status-bar-style" content="default">
+        <meta name="apple-mobile-web-app-title" content="TAS-SPB">
 
-    <script>
-        document.getElementById('loginForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const user = document.getElementById('username').value.trim();
-            const pass = document.getElementById('password').value;
-            const btn = document.getElementById('btnSubmit');
+        <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap"
+            rel="stylesheet">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+        <link rel="icon" type="image/png" href="favicon.png">
+        <link rel="apple-touch-icon" href="favicon.png">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-status-bar-style" content="default">
+        <meta name="apple-mobile-web-app-title" content="TAS-SPB">
+        <style>
+            :root {
+                --primary: #4f46e5;
+                --primary-dark: #4338ca;
+                --text-main: #1f2937;
+                --text-muted: #6b7280;
+                --bg-gradient: linear-gradient(135deg, #e0e7ff 0%, #f3f4f6 100%);
+                --white: #ffffff;
+                --danger: #ef4444;
+            }
 
-            btn.disabled = true;
-            btn.innerText = "กำลังตรวจสอบ...";
+            * {
+                box-sizing: border-box;
+                margin: 0;
+                padding: 0;
+            }
 
-            try {
-                // 1. ลองเชื่อมต่อ
-                console.log("กำลังเชื่อมต่อตาราง:", TAS_CONFIG.TABLE_USER);
-                
-                const { data, error } = await sbClient
-                    .from(TAS_CONFIG.TABLE_USER)
-                    .select('*')
-                    .eq('personnel_id', user)
-                    .single();
+            body {
+                font-family: 'Sarabun', sans-serif;
+                background: var(--bg-gradient);
+                min-height: 100vh;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                padding: 20px;
+                color: var(--text-main);
+            }
 
-                // 2. วิเคราะห์ Error แบบละเอียด
-                if (error) {
-                    console.error("Supabase Error:", error);
-                    
-                    if (error.code === 'PGRST116') {
-                        // Error นี้แปลว่า Syntax ถูก แต่หาไม่เจอ (0 rows)
-                        throw new Error(`ไม่พบรหัสพนักงาน "${user}" ในระบบ\n(กรุณาเช็คว่า Insert ข้อมูลหรือยัง)`);
-                    } 
-                    
-                    if (error.code === '42P01') {
-                        // Error นี้แปลว่าหา Table ไม่เจอ
-                        throw new Error(`ไม่พบตารางชื่อ "${TAS_CONFIG.TABLE_USER}"\n(ชื่อตารางตัวเล็ก/ใหญ่ ไม่ตรงกับ DB)`);
-                    }
+            /* Card */
+            .login-card {
+                background: var(--white);
+                width: 100%;
+                max-width: 400px;
+                padding: 40px 30px;
+                border-radius: 24px;
+                box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+                text-align: center;
+                position: relative;
+                overflow: hidden;
+                animation: slideUp 0.6s ease-out;
+            }
 
-                    throw new Error("DB Error: " + error.message);
+            /* Header Section */
+            .header {
+                margin-bottom: 30px;
+            }
+
+            .logo-circle {
+                width: 80px;
+                height: 80px;
+                background: linear-gradient(135deg, #4f46e5, #818cf8);
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                margin: 0 auto 15px;
+                color: white;
+                font-size: 2.5rem;
+                box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.3);
+            }
+
+            .header h2 {
+                font-size: 1.5rem;
+                font-weight: 700;
+                color: var(--text-main);
+            }
+
+            .header p {
+                color: var(--text-muted);
+                font-size: 0.9rem;
+                margin-top: 5px;
+            }
+
+            /* Form Elements */
+            .form-group {
+                margin-bottom: 20px;
+                text-align: left;
+                position: relative;
+            }
+
+            .form-group label {
+                display: block;
+                margin-bottom: 8px;
+                font-weight: 600;
+                font-size: 0.9rem;
+                color: var(--text-main);
+            }
+
+            .input-wrapper {
+                position: relative;
+            }
+
+            .input-wrapper i {
+                position: absolute;
+                left: 15px;
+                top: 50%;
+                transform: translateY(-50%);
+                color: #9ca3af;
+                font-size: 1.1rem;
+                transition: color 0.3s;
+            }
+
+            input {
+                width: 100%;
+                padding: 14px 14px 14px 45px;
+                border: 2px solid #e5e7eb;
+                border-radius: 12px;
+                font-family: 'Sarabun';
+                font-size: 1rem;
+                transition: all 0.3s;
+                background: #f9fafb;
+            }
+
+            input:focus {
+                outline: none;
+                border-color: var(--primary);
+                background: white;
+                box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1);
+            }
+
+            input:focus+i {
+                color: var(--primary);
+            }
+
+            /* Button */
+            .btn-login {
+                width: 100%;
+                padding: 16px;
+                border: none;
+                border-radius: 12px;
+                background: var(--primary);
+                color: white;
+                font-size: 1.1rem;
+                font-weight: 700;
+                cursor: pointer;
+                transition: all 0.3s;
+                box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.2);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 10px;
+            }
+
+            .btn-login:hover {
+                background: var(--primary-dark);
+                transform: translateY(-2px);
+                box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.3);
+            }
+
+            .btn-login:active {
+                transform: scale(0.98);
+            }
+
+            .btn-login:disabled {
+                background: #9ca3af;
+                cursor: not-allowed;
+                transform: none;
+            }
+
+            /* Footer */
+            .card-footer {
+                margin-top: 25px;
+                font-size: 0.85rem;
+                color: var(--text-muted);
+            }
+
+            .back-link {
+                color: var(--primary);
+                text-decoration: none;
+                font-weight: 600;
+                display: inline-flex;
+                align-items: center;
+                gap: 5px;
+                margin-top: 10px;
+            }
+
+            .back-link:hover {
+                text-decoration: underline;
+            }
+
+            /* Animations */
+            @keyframes slideUp {
+                from {
+                    opacity: 0;
+                    transform: translateY(20px);
                 }
 
-                if (!data) throw new Error("ข้อมูลผู้ใช้เป็นค่าว่าง (NULL)");
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
 
-                // 3. เช็ค Password (รองรับทั้ง P ตัวใหญ่และเล็ก)
-                console.log("ข้อมูลที่ได้จาก DB:", data);
-                const dbPass = data.Password || data.password || "";
-                
-                if (String(dbPass) !== String(pass)) {
-                    throw new Error(`รหัสผ่านไม่ถูกต้อง`);
+            /* Responsive */
+            @media (max-width: 480px) {
+                .login-card {
+                    padding: 30px 20px;
                 }
 
-                if (String(data.level) !== '1') {
-                    throw new Error("สิทธิ์การใช้งานของคุณไม่ถูกต้อง (เฉพาะ Level 1)");
+                .header h2 {
+                    font-size: 1.3rem;
                 }
+            }
+        </style>
 
-                // สำเร็จ
-                localStorage.setItem('tas_user', JSON.stringify(data));
-                await Swal.fire({
-                    icon: 'success', title: 'สำเร็จ!',
-                    text: `ยินดีต้อนรับ ${data.name}`,
-                    timer: 1000, showConfirmButton: false
-                });
+        <script src="supabase.js"></script>
+        <script src="sweetalert2.js"></script>
+        <script src="config.js"></script>
+    </head>
 
-                window.location.href = 'menu.html';
+    <body>
 
-            } catch (err) {
-                // แจ้งเตือนสาเหตุที่แท้จริง
+        <div class="login-card">
+            <div class="header">
+                <div class="logo-circle">
+                    <i class="fas fa-user-shield"></i>
+                </div>
+                <h2>เข้าสู่ระบบ</h2>
+                <p>TAS-SPB Time Attendance System</p>
+            </div>
+
+            <form id="loginForm">
+                <div class="form-group">
+                    <label>รหัสพนักงาน</label>
+                    <div class="input-wrapper">
+                        <i class="fas fa-id-card"></i>
+                        <input type="text" id="username" placeholder="กรอกรหัสพนักงาน..." required autocomplete="off">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>รหัสผ่าน</label>
+                    <div class="input-wrapper">
+                        <i class="fas fa-lock"></i>
+                        <input type="password" id="password" placeholder="กรอกรหัสผ่าน..." required>
+                    </div>
+                </div>
+
+                <button type="submit" id="btnSubmit" class="btn-login">
+                    <span>เข้าสู่ระบบ</span> <i class="fas fa-arrow-right"></i>
+                </button>
+            </form>
+
+            <div class="card-footer">
+                <p>สำหรับเจ้าหน้าที่ระดับปฏิบัติการ (Level 1)</p>
+                <a href="index.html" class="back-link"><i class="fas fa-home"></i> กลับหน้าหลัก</a>
+            </div>
+        </div>
+
+        <script>
+            // Init System Check
+            if (typeof sbClient === 'undefined') {
                 Swal.fire({
                     icon: 'error',
-                    title: 'เข้าสู่ระบบไม่ได้',
-                    text: err.message,
-                    footer: '<span style="color:red">ลองกด F12 ดู Console เพื่อดูรายละเอียด</span>'
+                    title: 'System Error',
+                    text: 'ไม่พบการเชื่อมต่อ Supabase (กรุณาตรวจสอบ config.js)',
+                    confirmButtonColor: '#ef4444'
                 });
-                btn.disabled = false;
-                btn.innerText = "เข้าสู่ระบบ";
             }
-        });
-    </script>
-</body>
+
+            // Handle Login
+            document.getElementById('loginForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+
+                const user = document.getElementById('username').value.trim();
+                const pass = document.getElementById('password').value;
+                const btn = document.getElementById('btnSubmit');
+                const originalBtnContent = btn.innerHTML;
+
+                // UI Loading State
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> กำลังตรวจสอบ...';
+
+                try {
+                    // 1. Query Database
+                    const { data, error } = await sbClient
+                        .from(TAS_CONFIG.TABLE_USER)
+                        .select('*')
+                        .eq('personnel_id', user)
+                        .single();
+
+                    // 2. Error Handling
+                    if (error) {
+                        if (error.code === 'PGRST116') throw new Error(`ไม่พบรหัสพนักงาน "${user}" ในระบบ`);
+                        if (error.code === '42P01') throw new Error(`ไม่พบตารางข้อมูล "${TAS_CONFIG.TABLE_USER}"`);
+                        throw new Error(error.message);
+                    }
+
+                    if (!data) throw new Error("ข้อมูลผู้ใช้งานไม่ถูกต้อง");
+
+                    // 3. Password & Level Check
+                    const dbPass = data.Password || data.password || "";
+
+                    if (String(dbPass) !== String(pass)) {
+                        throw new Error("รหัสผ่านไม่ถูกต้อง");
+                    }
+
+                    if (String(data.level) !== '1') {
+                        throw new Error("ขออภัย! สิทธิ์การใช้งานไม่ถูกต้อง (เฉพาะ Admin/Level 1)");
+                    }
+
+                    // 4. Success Login
+                    localStorage.setItem('tas_user', JSON.stringify(data));
+
+                    await Swal.fire({
+                        icon: 'success',
+                        title: 'ยินดีต้อนรับ',
+                        text: `คุณ ${data.name || 'ผู้ใช้งาน'}`,
+                        timer: 1500,
+                        showConfirmButton: false,
+                        backdrop: `rgba(0,0,0,0.4)`
+                    });
+
+                    // Redirect
+                    window.location.href = 'menu.html';
+
+                } catch (err) {
+                    console.error(err);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'เข้าสู่ระบบไม่สำเร็จ',
+                        text: err.message,
+                        confirmButtonColor: '#4f46e5',
+                        confirmButtonText: 'ลองใหม่อีกครั้ง'
+                    });
+
+                    // Reset Button
+                    btn.disabled = false;
+                    btn.innerHTML = originalBtnContent;
+                }
+            });
+        </script>
+    </body>
+
 </html>

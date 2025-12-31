@@ -1,49 +1,438 @@
 <!DOCTYPE html>
 <html lang="th">
-<head>
-    <meta charset="UTF-8">
-    <title>ตั้งค่า - TAS-SPB</title>
-    <link rel="icon" type="image/png" href="favicon.png">
-    <style>
-        body { font-family: 'Sarabun', sans-serif; background: #f3f4f6; padding: 20px; display: flex; flex-direction: column; align-items: center; }
-        .card { background: white; width: 100%; max-width: 400px; padding: 20px; border-radius: 15px; }
-        .menu-item { padding: 15px; border-bottom: 1px solid #eee; cursor: pointer; display: flex; justify-content: space-between; }
-        .menu-item:last-child { border-bottom: none; }
-        .back-btn { text-decoration: none; color: #4b5563; font-weight: bold; display: block; margin-bottom: 20px; align-self: flex-start; margin-left: max(0px, calc(50% - 200px)); }
-    </style>
-    <script src="sweetalert2.js"></script>
-</head>
-<body>
-    <a href="menu.html" class="back-btn">⬅ กลับเมนูหลัก</a>
 
-    <div class="card">
-        <h2 style="margin-top:0;">⚙️ ตั้งค่า</h2>
-        <div style="text-align: center; margin-bottom: 20px;">
-            <div style="font-size: 3rem;">👤</div>
-            <div id="uName">...</div>
-            <div id="uID" style="color:gray; font-size: 0.9rem;">...</div>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>ตั้งค่าระบบ - TAS-SPB</title>
+        <link rel="icon" type="image/png" href="favicon.png">
+
+        <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap"
+            rel="stylesheet">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+        <link rel="icon" type="image/png" href="favicon.png">
+        <link rel="apple-touch-icon" href="favicon.png">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-status-bar-style" content="default">
+        <meta name="apple-mobile-web-app-title" content="TAS-SPB">
+        <style>
+            :root {
+                --primary: #f59e0b;
+                --primary-dark: #d97706;
+                --bg: #f3f4f6;
+                --text: #1f2937;
+            }
+
+            * {
+                box-sizing: border-box;
+            }
+
+            body {
+                font-family: 'Sarabun', sans-serif;
+                background: var(--bg);
+                margin: 0;
+                padding: 20px;
+                color: var(--text);
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .container {
+                width: 100%;
+                max-width: 600px;
+            }
+
+            /* Header */
+            .header {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                margin-bottom: 20px;
+            }
+
+            .back-btn {
+                text-decoration: none;
+                color: #4b5563;
+                font-weight: 600;
+                display: flex;
+                align-items: center;
+                gap: 5px;
+                background: white;
+                padding: 8px 15px;
+                border-radius: 20px;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+                transition: 0.2s;
+            }
+
+            .back-btn:hover {
+                background: #e5e7eb;
+                color: #111;
+            }
+
+            /* Profile Card */
+            .profile-card {
+                background: white;
+                padding: 20px;
+                border-radius: 16px;
+                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+                margin-bottom: 20px;
+                display: flex;
+                align-items: center;
+                gap: 15px;
+            }
+
+            .avatar {
+                width: 60px;
+                height: 60px;
+                background: linear-gradient(135deg, #fcd34d, #f59e0b);
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 1.8rem;
+                color: white;
+            }
+
+            .profile-info h3 {
+                margin: 0;
+                font-size: 1.1rem;
+            }
+
+            .profile-info p {
+                margin: 2px 0 0;
+                color: #6b7280;
+                font-size: 0.9rem;
+            }
+
+            /* Settings List */
+            .settings-list {
+                background: white;
+                border-radius: 16px;
+                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+                overflow: hidden;
+            }
+
+            .setting-item {
+                padding: 20px;
+                border-bottom: 1px solid #f3f4f6;
+                transition: 0.2s;
+            }
+
+            .setting-item:last-child {
+                border-bottom: none;
+            }
+
+            .setting-item:hover {
+                background: #fffbeb;
+            }
+
+            .setting-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 8px;
+            }
+
+            .setting-label {
+                font-weight: 600;
+                color: #374151;
+                font-size: 1rem;
+            }
+
+            .setting-key {
+                font-size: 0.75rem;
+                color: #9ca3af;
+                font-family: monospace;
+                background: #f3f4f6;
+                padding: 2px 6px;
+                border-radius: 4px;
+            }
+
+            .setting-input-group {
+                display: flex;
+                gap: 10px;
+            }
+
+            .setting-input {
+                flex: 1;
+                padding: 10px;
+                border: 1px solid #e5e7eb;
+                border-radius: 8px;
+                font-family: 'Sarabun';
+                font-size: 0.95rem;
+                transition: 0.2s;
+            }
+
+            .setting-input:focus {
+                outline: none;
+                border-color: var(--primary);
+                ring: 2px var(--primary);
+            }
+
+            .btn-save {
+                background: var(--primary);
+                color: white;
+                border: none;
+                padding: 0 15px;
+                border-radius: 8px;
+                cursor: pointer;
+                font-weight: 600;
+                transition: 0.2s;
+            }
+
+            .btn-save:hover {
+                background: var(--primary-dark);
+            }
+
+            .btn-save:disabled {
+                background: #d1d5db;
+                cursor: not-allowed;
+            }
+
+            /* Password Change Section */
+            .action-btn {
+                width: 100%;
+                padding: 15px;
+                background: white;
+                border: 1px solid #e5e7eb;
+                border-radius: 12px;
+                margin-top: 20px;
+                color: var(--text);
+                font-weight: 600;
+                cursor: pointer;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                transition: 0.2s;
+            }
+
+            .action-btn:hover {
+                background: #f9fafb;
+                border-color: #d1d5db;
+            }
+
+            /* Custom Swal Input Style */
+            .swal-input-group {
+                text-align: left;
+                margin-bottom: 15px;
+            }
+
+            .swal-label {
+                font-size: 0.9rem;
+                font-weight: 600;
+                color: #374151;
+                margin-bottom: 5px;
+                display: block;
+            }
+
+            .swal2-input {
+                margin: 0 !important;
+                width: 100% !important;
+                font-size: 1rem !important;
+            }
+        </style>
+
+        <script src="supabase.js"></script>
+        <script src="config.js"></script>
+        <script src="sweetalert2.js"></script>
+    </head>
+
+    <body>
+
+        <div class="container">
+            <div class="header">
+                <h2 style="margin:0; display:flex; align-items:center; gap:10px;">
+                    <i class="fas fa-cog" style="color:var(--primary)"></i> ตั้งค่าระบบ
+                </h2>
+                <a href="menu.html" class="back-btn">
+                    <i class="fas fa-arrow-left"></i> กลับเมนู
+                </a>
+            </div>
+
+            <div class="profile-card">
+                <div class="avatar"><i class="fas fa-user-shield"></i></div>
+                <div class="profile-info">
+                    <h3 id="uName">กำลังโหลด...</h3>
+                    <p id="uID">Admin ID: ...</p>
+                </div>
+            </div>
+
+            <h3 style="margin-left:5px; margin-bottom:10px; color:#4b5563;">⚙️ การตั้งค่าทั่วไป</h3>
+            <div id="settingsContainer" class="settings-list">
+                <div style="padding:20px; text-align:center; color:#999;">กำลังโหลดข้อมูล...</div>
+            </div>
+
+            <button class="action-btn" onclick="handleChangePassword()">
+                <span><i class="fas fa-key" style="margin-right:8px; color:#6b7280;"></i> เปลี่ยนรหัสผ่าน</span>
+                <i class="fas fa-chevron-right" style="color:#9ca3af;"></i>
+            </button>
+
+            <div style="text-align:center; margin-top:20px; font-size:0.8rem; color:#9ca3af;">
+                TAS-SPB System v2.1
+            </div>
         </div>
 
-        <div class="menu-item" onclick="Swal.fire('Info', 'Version 2.0.0', 'info')">
-            <span>เวอร์ชันแอปพลิเคชัน</span>
-            <span>2.0.0 ></span>
-        </div>
-        <div class="menu-item" onclick="changePass()">
-            <span>เปลี่ยนรหัสผ่าน</span>
-            <span>></span>
-        </div>
-    </div>
+        <script>
+            // 1. Check Auth & Load User
+            const user = JSON.parse(localStorage.getItem('tas_user') || '{}');
+            if (!user.personnel_id || String(user.level) !== '1') {
+                window.location.href = 'login.html';
+            } else {
+                document.getElementById('uName').innerText = user.name || 'Admin';
+                document.getElementById('uID').innerText = `ID: ${user.personnel_id} (ผู้ดูแลระบบ)`;
+            }
 
-    <script>
-        const user = JSON.parse(localStorage.getItem('tas_user') || '{}');
-        if (String(user.level) !== '1') window.location.href = 'login.html';
+            // 2. Load Settings from DB
+            document.addEventListener('DOMContentLoaded', loadSettings);
 
-        document.getElementById('uName').innerText = user.name;
-        document.getElementById('uID').innerText = "ID: " + user.personnel_id;
+            async function loadSettings() {
+                const container = document.getElementById('settingsContainer');
+                try {
+                    // ดึงข้อมูลจากตาราง Settings เรียงตาม Key
+                    const { data, error } = await sbClient
+                        .from('Settings')
+                        .select('*')
+                        .order('key', { ascending: true });
 
-        function changePass() {
-            Swal.fire('เปลี่ยนรหัสผ่าน', 'กรุณาติดต่อ Admin เพื่อเปลี่ยนรหัสผ่าน', 'info');
-        }
-    </script>
-</body>
+                    if (error) throw error;
+
+                    if (!data || data.length === 0) {
+                        container.innerHTML = '<div style="padding:20px; text-align:center;">ไม่พบการตั้งค่าในระบบ</div>';
+                        return;
+                    }
+
+                    container.innerHTML = '';
+                    data.forEach(item => {
+                        const div = document.createElement('div');
+                        div.className = 'setting-item';
+                        div.innerHTML = `
+                        <div class="setting-header">
+                            <span class="setting-label">${item.note || item.key}</span>
+                            <span class="setting-key">${item.key}</span>
+                        </div>
+                        <div class="setting-input-group">
+                            <input type="text" class="setting-input" 
+                                id="input-${item.key}" 
+                                value="${item.value || ''}" 
+                                placeholder="ยังไม่ได้กำหนดค่า">
+                            <button class="btn-save" onclick="saveSetting('${item.key}')">
+                                <i class="fas fa-save"></i> บันทึก
+                            </button>
+                        </div>
+                    `;
+                        container.appendChild(div);
+                    });
+
+                } catch (err) {
+                    console.error(err);
+                    container.innerHTML = `<div style="padding:20px; text-align:center; color:red;">โหลดข้อมูลไม่สำเร็จ: ${err.message}</div>`;
+                }
+            }
+
+            // 3. Save Function
+            async function saveSetting(key) {
+                const input = document.getElementById(`input-${key}`);
+                const btn = input.nextElementSibling;
+                const newValue = input.value.trim();
+
+                const originalText = btn.innerHTML;
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+                try {
+                    const { error } = await sbClient
+                        .from('Settings')
+                        .update({ value: newValue })
+                        .eq('key', key);
+
+                    if (error) throw error;
+
+                    await Swal.fire({
+                        icon: 'success',
+                        title: 'บันทึกสำเร็จ',
+                        text: `อัปเดตค่า ${key} เรียบร้อยแล้ว`,
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
+
+                } catch (err) {
+                    Swal.fire('Error', err.message, 'error');
+                } finally {
+                    btn.disabled = false;
+                    btn.innerHTML = originalText;
+                }
+            }
+
+            // 4. Change Password Function (Logic ใหม่)
+            async function handleChangePassword() {
+                const { value: formValues } = await Swal.fire({
+                    title: 'เปลี่ยนรหัสผ่าน',
+                    html: `
+                    <div class="swal-input-group">
+                        <label class="swal-label">รหัสผ่านปัจจุบัน</label>
+                        <input id="swal-current-pass" type="password" class="swal2-input" placeholder="กรอกรหัสเดิม">
+                    </div>
+                    <div class="swal-input-group">
+                        <label class="swal-label">กำหนดรหัสผ่านใหม่</label>
+                        <input id="swal-new-pass" type="password" class="swal2-input" placeholder="กรอกรหัสใหม่">
+                    </div>
+                `,
+                    focusConfirm: false,
+                    showCancelButton: true,
+                    confirmButtonText: 'บันทึกการเปลี่ยนแปลง',
+                    cancelButtonText: 'ยกเลิก',
+                    preConfirm: async () => {
+                        const currentPass = document.getElementById('swal-current-pass').value;
+                        const newPass = document.getElementById('swal-new-pass').value;
+
+                        if (!currentPass || !newPass) {
+                            Swal.showValidationMessage('กรุณากรอกข้อมูลให้ครบถ้วน');
+                            return false;
+                        }
+
+                        try {
+                            // 4.1 ตรวจสอบรหัสเดิมจากฐานข้อมูล
+                            const { data, error: fetchError } = await sbClient
+                                .from('Personnel')
+                                .select('Password')
+                                .eq('personnel_id', user.personnel_id)
+                                .single();
+
+                            if (fetchError || !data) throw new Error('ไม่สามารถตรวจสอบข้อมูลผู้ใช้ได้');
+
+                            // เช็คว่ารหัสเดิมถูกต้องหรือไม่ (Case Sensitive)
+                            if (data.Password !== currentPass) {
+                                throw new Error('รหัสผ่านปัจจุบันไม่ถูกต้อง');
+                            }
+
+                            // 4.2 บันทึกรหัสใหม่
+                            const { error: updateError } = await sbClient
+                                .from('Personnel')
+                                .update({ Password: newPass })
+                                .eq('personnel_id', user.personnel_id);
+
+                            if (updateError) throw new Error(updateError.message);
+
+                            return true; // สำเร็จ
+
+                        } catch (error) {
+                            Swal.showValidationMessage(error.message);
+                            return false;
+                        }
+                    }
+                });
+
+                // ถ้าสำเร็จ (PreConfirm return true)
+                if (formValues) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'สำเร็จ',
+                        text: 'เปลี่ยนรหัสผ่านเรียบร้อยแล้ว'
+                    });
+                }
+            }
+        </script>
+    </body>
+
 </html>
