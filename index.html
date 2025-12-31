@@ -142,7 +142,7 @@
                 border-radius: 50%;
             }
 
-            /* Action Button - แก้ไข cursor */
+            /* Action Button */
             .btn-start {
                 display: flex;
                 align-items: center;
@@ -159,6 +159,7 @@
                 transition: all 0.3s ease;
                 box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.2);
                 cursor: pointer;
+                /* เพิ่ม cursor pointer */
             }
 
             .btn-start:hover {
@@ -212,22 +213,45 @@
     </head>
 
     <body>
+
         <div class="landing-card">
-            <div class="logo-box"><i class="fas fa-school"></i></div>
+            <div class="logo-box">
+                <i class="fas fa-school"></i>
+            </div>
+
             <div class="badge">Time Attendance System</div>
+
             <h1>TAS-SPB System</h1>
-            <p>ระบบลงเวลาปฏิบัติงานออนไลน์<br>สะดวก รวดเร็ว และตรวจสอบได้ทันที</p>
+
+            <p>
+                ระบบลงเวลาปฏิบัติงานออนไลน์<br>
+                สะดวก รวดเร็ว และตรวจสอบได้ทันที
+            </p>
+
             <div class="features">
-                <div class="feature-item"><i class="fas fa-bolt"></i><span>รวดเร็ว</span></div>
-                <div class="feature-item"><i class="fas fa-mobile-alt"></i><span>รองรับมือถือ</span></div>
-                <div class="feature-item"><i class="fas fa-shield-alt"></i><span>ปลอดภัย</span></div>
+                <div class="feature-item">
+                    <i class="fas fa-bolt"></i>
+                    <span>รวดเร็ว</span>
+                </div>
+                <div class="feature-item">
+                    <i class="fas fa-mobile-alt"></i>
+                    <span>รองรับมือถือ</span>
+                </div>
+                <div class="feature-item">
+                    <i class="fas fa-shield-alt"></i>
+                    <span>ปลอดภัย</span>
+                </div>
             </div>
 
             <div onclick="window.location.href='login.html'" class="btn-start">
                 เข้าสู่ระบบลงเวลา <i class="fas fa-arrow-right"></i>
             </div>
         </div>
-        <div class="footer">&copy; 2025 TAS-SPB Project. All rights reserved.</div>
+
+        <div class="footer">
+            &copy; 2025 TAS-SPB Project. All rights reserved.
+        </div>
+
     </body>
 
 </html>
