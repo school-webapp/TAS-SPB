@@ -9,7 +9,7 @@
     <link rel="icon" type="image/png" href="favicon.png">
     <link rel="apple-touch-icon" href="favicon.png">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="mobile-web-app-status-bar-style" content="default">
     
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -20,7 +20,7 @@
     <script src="config.js"></script>
 
     <style>
-        :root { --primary: #4f46e5; --bg: #f3f4f6; --white: #ffffff; --text: #1f2937; --muted: #6b7280; }
+        :root { --primary: #4f46e5; --bg: #f3f4f6; --white: #ffffff; --text: #1e293b; --muted: #64748b; }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: 'Sarabun', sans-serif; background: var(--bg); color: var(--text); padding: 15px; padding-bottom: 50px; }
         .container { max-width: 500px; margin: 0 auto; }
@@ -28,36 +28,34 @@
         .card { background: var(--white); border-radius: 24px; padding: 25px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-bottom: 15px; }
         .profile-info { text-align: center; margin-bottom: 15px; }
         .user-emoji { font-size: 4rem; display: block; margin-bottom: 10px; }
-        .user-name { font-size: 1.4rem; font-weight: 700; color: var(--text); }
-        .user-id { color: var(--muted); font-size: 0.9rem; margin-top: 4px; }
+        .user-name { font-size: 1.4rem; font-weight: 700; }
 
-        .section-title { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding: 0 5px; }
-        .section-title h3 { font-size: 1.1rem; font-weight: 700; }
-        
+        /* Tabs UI */
+        .tabs { display: flex; background: #e2e8f0; padding: 5px; border-radius: 14px; margin-bottom: 15px; }
+        .tab-btn { flex: 1; padding: 10px; border: none; background: transparent; border-radius: 10px; cursor: pointer; font-weight: 600; color: var(--muted); font-family: 'Sarabun'; transition: 0.2s; }
+        .tab-btn.active { background: var(--white); color: var(--primary); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
         .history-item { 
             background: var(--white); border-radius: 16px; padding: 15px; margin-bottom: 10px; 
             display: flex; justify-content: space-between; align-items: center;
-            border-left: 5px solid transparent; transition: 0.2s;
+            border-left: 5px solid transparent; 
         }
         .item-db { border-left-color: #10b981; } 
         .item-url { border-left-color: #3b82f6; } 
         .item-leave { border-left-color: #f59e0b; } 
 
-        .item-date { font-weight: 700; font-size: 1rem; }
-        .item-source { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; }
-        .time-badge { padding: 4px 8px; border-radius: 8px; font-weight: 700; font-size: 0.9rem; }
+        .item-date { font-weight: 700; font-size: 0.95rem; }
+        .item-source { font-size: 0.7rem; color: var(--muted); }
+        .time-badge { padding: 4px 8px; border-radius: 8px; font-weight: 700; font-size: 0.85rem; min-width: 55px; text-align: center; }
         .t-in { background: #dcfce7; color: #15803d; }
         .t-out { background: #fee2e2; color: #b91c1c; }
 
-        .pagination { display: flex; gap: 10px; justify-content: center; margin: 20px 0; }
-        .btn-page { 
-            padding: 10px 20px; border: none; border-radius: 12px; background: var(--white); 
-            color: var(--primary); font-weight: 600; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-        }
-        .btn-page:disabled { color: #d1d5db; cursor: not-allowed; }
-
-        .btn-action { width: 100%; padding: 16px; border: none; border-radius: 16px; background: var(--primary); color: white; font-weight: 700; cursor: pointer; transition: 0.3s; margin-top: 10px; }
-        .btn-back { display: block; text-align: center; padding: 15px; color: var(--muted); text-decoration: none; font-weight: 600; font-size: 0.9rem; }
+        .pagination { display: flex; gap: 10px; justify-content: center; margin-top: 15px; }
+        .btn-page { padding: 8px 16px; border: none; border-radius: 10px; background: var(--white); color: var(--primary); font-weight: 600; cursor: pointer; font-size: 0.85rem; }
+        .btn-page:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-action { width: 100%; padding: 16px; border: none; border-radius: 16px; background: var(--primary); color: white; font-weight: 700; cursor: pointer; margin-top: 10px; }
     </style>
 </head>
 <body>
@@ -65,46 +63,45 @@
         <div class="card">
             <div class="profile-info">
                 <span class="user-emoji">👤</span>
-                <div class="user-name" id="u-name">กำลังโหลด...</div>
-                <div class="user-id" id="u-id">รหัสบุคลากร: -</div>
+                <div class="user-name" id="u-name">...</div>
+                <div style="color:var(--muted); font-size:0.9rem;" id="u-id">ID: -</div>
             </div>
             <button class="btn-action" onclick="changePassword()">🔐 เปลี่ยนรหัสผ่าน</button>
         </div>
 
-        <div class="section-title">
-            <h3>🕒 ประวัติลงเวลา</h3>
-            <span id="att-page-info" style="font-size: 0.8rem; color: var(--muted);"></span>
-        </div>
-        <div id="att-list"></div>
-        <div class="pagination">
-            <button id="att-prev" class="btn-page" onclick="changeAttPage(-1)">ก่อนหน้า</button>
-            <button id="att-next" class="btn-page" onclick="changeAttPage(1)">ถัดไป</button>
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('att')">🕒 เวลาทำงาน</button>
+            <button class="tab-btn" onclick="switchTab('leave')">✈️ การลา</button>
         </div>
 
-        <div class="section-title">
-            <h3>✈️ ประวัติการลา</h3>
-            <span id="leave-page-info" style="font-size: 0.8rem; color: var(--muted);"></span>
-        </div>
-        <div id="leave-list"></div>
-        <div class="pagination">
-            <button id="leave-prev" class="btn-page" onclick="changeLeavePage(-1)">ก่อนหน้า</button>
-            <button id="leave-next" class="btn-page" onclick="changeLeavePage(1)">ถัดไป</button>
+        <div id="tab-att" class="tab-content active">
+            <div id="att-list"></div>
+            <div class="pagination">
+                <button id="att-prev" class="btn-page" onclick="changeAttPage(-1)">สัปดาห์ก่อนหน้า</button>
+                <button id="att-next" class="btn-page" onclick="changeAttPage(1)">สัปดาห์ถัดไป</button>
+            </div>
         </div>
 
-        <a href="menu.html" class="btn-back"><i class="fas fa-chevron-left"></i> กลับหน้าเมนู</a>
+        <div id="tab-leave" class="tab-content">
+            <div id="leave-list"></div>
+            <div class="pagination">
+                <button id="leave-prev" class="btn-page" onclick="changeLeavePage(-1)">หน้าก่อนหน้า</button>
+                <button id="leave-next" class="btn-page" onclick="changeLeavePage(1)">หน้าถัดไป</button>
+            </div>
+        </div>
+
+        <a href="menu.html" style="display:block; text-align:center; padding:20px; color:var(--muted); text-decoration:none;">กลับเมนูหลัก</a>
     </div>
 
     <script>
         const user = JSON.parse(localStorage.getItem('tas_user') || '{}');
-        let attPage = 0, leavePage = 0;
-        const pageSize = 7; 
-        let externalBaseURL = "";
+        let attPage = 0, leavePage = 0, externalBaseURL = "";
+        const pageSize = 7;
 
         document.addEventListener('DOMContentLoaded', async () => {
             if (!user.personnel_id) { window.location.href = 'login.html'; return; }
             document.getElementById('u-name').innerText = user.name;
             document.getElementById('u-id').innerText = `รหัสบุคลากร: ${user.personnel_id}`;
-            
             await fetchSettings();
             loadAttendance();
             loadLeaves();
@@ -114,34 +111,33 @@
             try {
                 const { data } = await sbClient.from(TAS_CONFIG.TABLE_SETTINGS).select('value').eq('key', 'data_url').single();
                 if (data) externalBaseURL = data.value;
-            } catch (e) { console.error("Setting error", e); }
+            } catch (e) {}
+        }
+
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            event.target.classList.add('active');
+            document.getElementById(`tab-${tab}`).classList.add('active');
         }
 
         async function loadAttendance() {
             const container = document.getElementById('att-list');
-            container.innerHTML = '<p style="text-align:center; padding:20px; color:#9ca3af;">กำลังดึงข้อมูลเวลา...</p>';
+            container.innerHTML = '<p style="text-align:center; padding:20px; color:var(--muted);">กำลังประมวลผลข้อมูล Hybrid...</p>';
             
             try {
-                // 1. ดึงจาก Database (TimeStamp)
+                // 1. ดึงจาก Database
                 const { data: dbData } = await sbClient.from(TAS_CONFIG.TABLE_TARGET)
                     .select('work_date, time_in, time_out')
                     .eq('personnel_id', user.personnel_id)
                     .order('work_date', { ascending: false })
                     .range(attPage * pageSize, (attPage + 1) * pageSize - 1);
 
-                let combinedHTML = "";
+                let html = "";
                 const dbDates = new Set();
+                if (dbData) dbData.forEach(d => { dbDates.add(d.work_date); html += renderItem(d, 'DB'); });
 
-                // แสดงข้อมูลจาก DB
-                if (dbData && dbData.length > 0) {
-                    dbData.forEach(item => {
-                        dbDates.add(item.work_date);
-                        combinedHTML += renderHistoryItem(item, 'DB');
-                    });
-                }
-
-                // 2. ดึงจาก URL ภายนอก (ต่อท้ายด้วย วันเดือนปี/ เช่น 30122025/)
-                // สำหรับช่วงทดสอบ: ลองดึงข้อมูลย้อนหลัง 7 วันของหน้านั้นๆ
+                // 2. ดึงจาก URL (Logic เดียวกับ process.html)
                 if (externalBaseURL) {
                     const today = new Date();
                     for(let i=0; i<pageSize; i++) {
@@ -149,105 +145,76 @@
                         targetDate.setDate(today.getDate() - (attPage * pageSize + i));
                         const dateDB = targetDate.toISOString().split('T')[0];
                         
-                        // กรอง: หากมีใน DB แล้วจะไม่ดึงจาก URL (แต่ช่วงทดสอบจะให้แสดงคู่กัน)
-                        // เพื่อให้เป็นไปตามโจทย์ "หากพบใน TimeStamp จะไม่แสดงจากใน url"
-                        // ในที่นี้จะใส่เงื่อนไขเช็ค dbDates
+                        // กรองตามเงื่อนไข: หากพบใน DB แล้วจะไม่ดึงจาก URL ในระบบจริง แต่ช่วงทดสอบให้แสดงคู่กันได้
+                        const dateURL = formatDateURL(targetDate);
+                        const proxyURL = `https://api.allorigins.win/get?url=${encodeURIComponent(externalBaseURL + dateURL)}`;
                         
-                        if (!dbDates.has(dateDB)) {
-                            const dateURL = formatDateForURL(targetDate);
-                            const fullURL = externalBaseURL.endsWith('/') ? externalBaseURL + dateURL + '/' : externalBaseURL + '/' + dateURL + '/';
-                            
-                            // ในระบบจริงจะใช้ fetch(fullURL) ผ่าน Proxy (AllOrigins)
-                            // ในเบื้องต้นทดสอบการแสดงผลแหล่งที่มา
-                            combinedHTML += renderHistoryItem({ work_date: dateDB, time_in: 'ดึงจาก', time_out: 'URL' }, 'URL');
-                        }
+                        try {
+                            const res = await fetch(proxyURL);
+                            if (res.ok) {
+                                const json = await res.json();
+                                const records = parseHTML(json.contents, dateDB);
+                                const myRecord = records.find(r => r.personnel_id === user.personnel_id);
+                                if (myRecord) html += renderItem(myRecord, 'URL');
+                            }
+                        } catch (err) {}
                     }
                 }
-                
-                container.innerHTML = combinedHTML || '<p style="text-align:center; padding:20px; color:#9ca3af;">ไม่มีข้อมูลในสัปดาห์นี้</p>';
-                document.getElementById('att-page-info').innerText = `สัปดาห์ที่ ${attPage + 1}`;
+                container.innerHTML = html || '<p style="text-align:center; padding:20px; color:var(--muted);">ไม่พบข้อมูล</p>';
                 document.getElementById('att-prev').disabled = attPage === 0;
-            } catch (e) { container.innerHTML = 'Error loading attendance.'; }
+            } catch (e) { container.innerHTML = 'Error loading data.'; }
         }
 
-        function renderHistoryItem(item, source) {
-            const sourceText = source === 'DB' ? 'ฐานข้อมูลระบบ (DB)' : 'ลิงก์ภายนอก (URL)';
-            const cssClass = source === 'DB' ? 'item-db' : 'item-url';
+        function parseHTML(htmlString, dateStr) {
+            const parser = new DOMParser(), doc = parser.parseFromString(htmlString, "text/html"), table = doc.getElementById('mainTable'), records = [];
+            if (!table) return [];
+            table.querySelectorAll('tbody tr').forEach(row => {
+                const cols = row.querySelectorAll('td');
+                if (cols.length >= 4) {
+                    records.push({ personnel_id: cols[0].innerText.trim(), work_date: dateStr, time_in: cols[2].innerText.trim(), time_out: cols[3].innerText.trim() });
+                }
+            }); return records;
+        }
+
+        function renderItem(item, src) {
             return `
-                <div class="history-item ${cssClass}">
-                    <div>
-                        <div class="item-date">${formatThaiDate(item.work_date)}</div>
-                        <div class="item-source">${sourceText}</div>
-                    </div>
-                    <div style="display:flex; gap:8px;">
-                        <span class="time-badge t-in">${item.time_in ? item.time_in.slice(0, 5) : '--:--'}</span>
-                        <span class="time-badge t-out">${item.time_out ? item.time_out.slice(0, 5) : '--:--'}</span>
-                    </div>
-                </div>`;
-        }
-
-        function formatDateForURL(date) {
-            const d = String(date.getDate()).padStart(2, '0');
-            const m = String(date.getMonth() + 1).padStart(2, '0');
-            const y = date.getFullYear();
-            return `${d}${m}${y}`; // ผลลัพธ์ 30122025
+            <div class="history-item ${src === 'DB' ? 'item-db' : 'item-url'}">
+                <div>
+                    <div class="item-date">${formatThaiDate(item.work_date)}</div>
+                    <div class="item-source">${src === 'DB' ? 'ระบบหลัก (DB)' : 'เว็บรายงาน (URL)'}</div>
+                </div>
+                <div style="display:flex; gap:5px;">
+                    <span class="time-badge t-in">${item.time_in || '--:--'}</span>
+                    <span class="time-badge t-out">${item.time_out || '--:--'}</span>
+                </div>
+            </div>`;
         }
 
         async function loadLeaves() {
             const container = document.getElementById('leave-list');
-            container.innerHTML = '<p style="text-align:center; padding:20px; color:#9ca3af;">กำลังดึงข้อมูลการลา...</p>';
-
             try {
-                const { data } = await sbClient.from('Leave_records')
-                    .select('*')
-                    .eq('personnel_id', user.personnel_id)
-                    .order('leave_date', { ascending: false })
-                    .range(leavePage * pageSize, (leavePage + 1) * pageSize - 1);
-
+                const { data } = await sbClient.from('Leave_records').select('*').eq('personnel_id', user.personnel_id).order('leave_date', { ascending: false }).range(leavePage * pageSize, (leavePage + 1) * pageSize - 1);
                 if (data && data.length > 0) {
                     container.innerHTML = data.map(item => `
                         <div class="history-item item-leave">
-                            <div>
-                                <div class="item-date">${formatThaiDate(item.leave_date)}</div>
-                                <div class="item-source">${item.leave_type}</div>
-                            </div>
-                            <div style="font-size:0.8rem; color:var(--muted);">${item.status || 'อนุมัติ'}</div>
-                        </div>
-                    `).join('');
-                } else {
-                    container.innerHTML = '<p style="text-align:center; padding:20px; color:#9ca3af;">ไม่มีประวัติการลา</p>';
-                }
-                document.getElementById('leave-page-info').innerText = `หน้า ${leavePage + 1}`;
+                            <div><div class="item-date">${formatThaiDate(item.leave_date)}</div><div class="item-source">${item.leave_type}</div></div>
+                            <div style="font-size:0.8rem; font-weight:700;">${item.status || 'อนุมัติแล้ว'}</div>
+                        </div>`).join('');
+                } else container.innerHTML = '<p style="text-align:center; padding:20px; color:var(--muted);">ไม่พบประวัติการลา</p>';
                 document.getElementById('leave-prev').disabled = leavePage === 0;
-            } catch (e) { container.innerHTML = 'Error loading leaves.'; }
+            } catch (e) {}
         }
 
-        function changeAttPage(step) { attPage += step; loadAttendance(); window.scrollTo(0,0); }
-        function changeLeavePage(step) { leavePage += step; loadLeaves(); }
-
-        function formatThaiDate(dateStr) {
-            const d = new Date(dateStr);
-            return d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' });
-        }
-
+        function formatDateURL(date) { const pad = (n) => String(n).padStart(2, '0'); return `${pad(date.getDate())}${pad(date.getMonth() + 1)}${date.getFullYear()}`; }
+        function formatThaiDate(s) { const d = new Date(s); return d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' }); }
+        function changeAttPage(s) { attPage += s; loadAttendance(); }
+        function changeLeavePage(s) { leavePage += s; loadLeaves(); }
+        
         async function changePassword() {
-            const { value: newPass } = await Swal.fire({
-                title: 'เปลี่ยนรหัสผ่านใหม่',
-                input: 'password',
-                inputPlaceholder: 'ระบุรหัสผ่านใหม่',
-                showCancelButton: true,
-                confirmButtonText: 'บันทึก',
-                inputAttributes: { minlength: 4 },
-                inputValidator: (v) => { if (!v) return 'กรุณาระบุรหัสผ่าน'; }
-            });
-
+            const { value: newPass } = await Swal.fire({ title: 'เปลี่ยนรหัสผ่าน', input: 'password', inputPlaceholder: 'ระบุรหัสผ่านใหม่', showCancelButton: true, confirmButtonText: 'บันทึก' });
             if (newPass) {
                 const { error } = await sbClient.from(TAS_CONFIG.TABLE_USER).update({ Password: newPass }).eq('personnel_id', user.personnel_id);
-                if (!error) {
-                    user.Password = newPass;
-                    localStorage.setItem('tas_user', JSON.stringify(user));
-                    Swal.fire('สำเร็จ', 'เปลี่ยนรหัสผ่านเรียบร้อยแล้ว', 'success');
-                }
+                if (!error) { user.Password = newPass; localStorage.setItem('tas_user', JSON.stringify(user)); Swal.fire('สำเร็จ', 'บันทึกแล้ว', 'success'); }
             }
         }
     </script>
