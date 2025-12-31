@@ -16,7 +16,6 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
-        /* เรียกใช้ Font TH Sarabun New */
         @font-face {
             font-family: 'THSarabunNew';
             src: url('font/THSarabunNew.ttf') format('truetype');
@@ -72,15 +71,16 @@
             #reportWrapper { transform: scale(0.42); transform-origin: top center; height: auto; margin-bottom: -60%; }
         }
 
-        /* หัวเรื่อง 18pt และตั้งค่าการตัดบรรทัดที่วรรค */
-        .rpt-header { text-align: center; margin-bottom: 6mm; line-height: 1.2; }
+        /* หัวเรื่อง: แก้ไข Logic การตัดคำให้เป็นธรรมชาติ */
+        .rpt-header { text-align: center; margin-bottom: 6mm; line-height: 1.1; }
         .rpt-title { 
             font-size: 18pt; 
             font-weight: bold; 
             display: block; 
             width: 100%;
-            white-space: pre-wrap; /* รักษาการขึ้นบรรทัดใหม่จาก JavaScript */
-            word-wrap: break-word;
+            white-space: normal; /* ปล่อยให้ไหลตามธรรมชาติ */
+            word-break: keep-all; /* ไม่ตัดกลางคำไทย ให้ตัดที่วรรคเท่านั้น */
+            overflow-wrap: break-word;
         }
         .rpt-sub { font-size: 18pt; }
 
@@ -180,15 +180,8 @@
                         pageEl.className = 'paper';
                         const items = sortedList.slice(p * ROWS_PER_PAGE, (p + 1) * ROWS_PER_PAGE);
                         
-                        // แก้ไขการแสดงผลหัวเรื่องให้ตัดบรรทัดที่วรรค
-                        let headerTitle = "บันทึกการลงเวลาปฏิบัติงานของ " + type;
-                        if (headerTitle.length > 40) {
-                            // หาช่องว่างสุดท้ายก่อนถึงจุดที่เหมาะสม (ประมาณ 35-40 ตัวอักษร)
-                            let lastSpaceIndex = headerTitle.lastIndexOf(' ', 45);
-                            if (lastSpaceIndex !== -1) {
-                                headerTitle = headerTitle.substring(0, lastSpaceIndex) + "\n" + headerTitle.substring(lastSpaceIndex + 1);
-                            }
-                        }
+                        // หัวเรื่อง: ใช้ช่องว่างปกติเพื่อให้ Browser คำนวณจุดตัดบรรทัดเองที่วรรค
+                        const headerTitle = "บันทึกการลงเวลาปฏิบัติงานของ " + type;
 
                         pageEl.innerHTML = `
                             <div class="rpt-header">
@@ -237,7 +230,7 @@
                                     </div>
                                 </div>
                                 <div class="signature-area">
-                                    <div style="margin-top:3.5mm;">(ลงชื่อ)............................................................</div>
+                                    <div style="margin-top:5mm;">(ลงชื่อ)............................................................</div>
                                     <div style="margin-top:2mm;">(${config['signer_name'] || ''})</div>
                                     <div>${config['signer_position'] || ''}</div>
                                 </div>
