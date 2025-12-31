@@ -19,30 +19,15 @@
         body { font-family: 'Sarabun', sans-serif; background: var(--bg); color: var(--text); padding: 15px; padding-bottom: 50px; }
         .container { max-width: 500px; margin: 0 auto; }
 
-        /* Header Card - ย้ายไปด้านบนสไตล์เดียวกับหน้าอื่น */
         .header-card {
-            background: var(--white);
-            padding: 15px 20px;
-            border-radius: 16px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-            margin-bottom: 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+            background: var(--white); padding: 15px 20px; border-radius: 16px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05); margin-bottom: 20px;
+            display: flex; justify-content: space-between; align-items: center;
         }
         .header-title { display: flex; align-items: center; gap: 10px; color: var(--primary); font-weight: 700; }
         .back-btn {
-            text-decoration: none;
-            color: var(--muted);
-            background: #f9fafb;
-            padding: 8px 15px;
-            border-radius: 20px;
-            border: 1px solid #e5e7eb;
-            font-size: 0.9rem;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            cursor: pointer;
+            text-decoration: none; color: var(--muted); background: #f9fafb; padding: 8px 15px;
+            border-radius: 20px; border: 1px solid #e5e7eb; font-size: 0.9rem; display: flex; align-items: center; gap: 5px;
         }
 
         .card { background: var(--white); border-radius: 24px; padding: 25px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-bottom: 15px; }
@@ -60,14 +45,16 @@
             display: flex; justify-content: space-between; align-items: center;
             border-left: 5px solid #cbd5e1; 
         }
-        .item-active { border-left-color: #10b981; } 
+        .item-db { border-left-color: #10b981; } 
+        .item-url { border-left-color: #3b82f6; }
         .item-leave { border-left-color: #f59e0b; } 
         .item-date { font-weight: 700; font-size: 0.95rem; }
         .item-source { font-size: 0.7rem; color: var(--muted); }
         .time-badge { padding: 4px 8px; border-radius: 8px; font-weight: 700; font-size: 0.85rem; min-width: 55px; text-align: center; }
         .t-in { background: #dcfce7; color: #15803d; }
         .t-out { background: #fee2e2; color: #b91c1c; }
-        
+        .btn-check-url { border: none; background: #e0e7ff; color: #4338ca; padding: 5px 10px; border-radius: 8px; font-size: 0.75rem; font-weight: 600; cursor: pointer; }
+
         .pagination { display: flex; gap: 10px; justify-content: center; margin-top: 15px; }
         .btn-page { padding: 8px 16px; border: none; border-radius: 10px; background: var(--white); color: var(--primary); font-weight: 600; cursor: pointer; }
         .btn-page:disabled { opacity: 0.5; }
@@ -77,19 +64,14 @@
 <body>
     <div class="container">
         <div class="header-card">
-            <div class="header-title">
-                <i class="fas fa-user-circle"></i>
-                <span>โปรไฟล์ส่วนตัว</span>
-            </div>
-            <div onclick="window.location.href='menu.html'" class="back-btn">
-                <i class="fas fa-arrow-left"></i> เมนู
-            </div>
+            <div class="header-title"><i class="fas fa-user-circle"></i> <span>โปรไฟล์</span></div>
+            <div onclick="window.location.href='menu.html'" class="back-btn"><i class="fas fa-arrow-left"></i> เมนู</div>
         </div>
 
         <div class="card">
             <div class="profile-info">
                 <span class="user-emoji">👤</span>
-                <div class="user-name" id="u-name" style="font-weight:700; font-size:1.4rem;">...</div>
+                <div id="u-name" style="font-weight:700; font-size:1.4rem;">...</div>
                 <div id="u-id" style="color:var(--muted); font-size:0.9rem;">ID: -</div>
             </div>
             <button class="btn-action" onclick="changePassword()">🔐 เปลี่ยนรหัสผ่าน</button>
@@ -103,8 +85,8 @@
         <div id="tab-att" class="tab-content active">
             <div id="att-list"></div>
             <div class="pagination">
-                <button id="att-prev" class="btn-page" onclick="changeAttPage(-1)">ก่อนหน้า</button>
-                <button id="att-next" class="btn-page" onclick="changeAttPage(1)">ถัดไป</button>
+                <button id="att-prev" class="btn-page" onclick="changeAttPage(-1)">สัปดาห์ก่อน</button>
+                <button id="att-next" class="btn-page" onclick="changeAttPage(1)">สัปดาห์ถัดไป</button>
             </div>
         </div>
 
@@ -120,23 +102,20 @@
     <script>
         const user = JSON.parse(localStorage.getItem('tas_user') || '{}');
         let attPage = 0, leavePage = 0, externalBaseURL = "";
-        const pageSizeAtt = 7; 
-        const pageSizeLeave = 5; 
+        const pageSize = 7;
 
         document.addEventListener('DOMContentLoaded', async () => {
             if (!user.personnel_id) { window.location.href = 'login.html'; return; }
             document.getElementById('u-name').innerText = user.name;
-            document.getElementById('u-id').innerText = `รหัสบุคลากร: ${user.personnel_id}`;
+            document.getElementById('u-id').innerText = `รหัส: ${user.personnel_id}`;
             await fetchSettings();
             loadAttendance();
             loadLeaves();
         });
 
         async function fetchSettings() {
-            try {
-                const { data } = await sbClient.from(TAS_CONFIG.TABLE_SETTINGS).select('value').eq('key', 'data_url').single();
-                if (data) externalBaseURL = data.value;
-            } catch (e) {}
+            const { data } = await sbClient.from(TAS_CONFIG.TABLE_SETTINGS).select('value').eq('key', 'data_url').single();
+            if (data) externalBaseURL = data.value;
         }
 
         function switchTab(tab) {
@@ -146,92 +125,132 @@
             document.getElementById(`tab-${tab}`).classList.add('active');
         }
 
+        // --- ระบบลงเวลา: เน้นโหลด DB ก่อนเพื่อความเร็ว ---
         async function loadAttendance() {
             const container = document.getElementById('att-list');
-            container.innerHTML = '<p style="text-align:center; padding:20px; color:var(--muted);">กำลังโหลดข้อมูล...</p>';
-            try {
-                let combinedData = [];
-                const dbDates = new Set();
-                const { data: dbData } = await sbClient.from(TAS_CONFIG.TABLE_TARGET).select('work_date, time_in, time_out').eq('personnel_id', user.personnel_id).order('work_date', { ascending: false });
-                if (dbData) { dbData.forEach(item => { dbDates.add(item.work_date); combinedData.push({ ...item, source: 'DB' }); }); }
-                
-                if (externalBaseURL) {
-                    const today = new Date();
-                    for(let i=0; i<14; i++) {
-                        const targetDate = new Date(); targetDate.setDate(today.getDate() - i);
-                        const dateStr = targetDate.toISOString().split('T')[0];
-                        if (!dbDates.has(dateStr)) {
-                            const dateURL = formatDateURL(targetDate);
-                            try {
-                                const proxyURL = `https://api.allorigins.win/get?url=${encodeURIComponent(externalBaseURL + dateURL)}`;
-                                const res = await fetch(proxyURL); const json = await res.json();
-                                const records = parseHTML(json.contents, dateStr);
-                                const myRecord = records.find(r => r.personnel_id === user.personnel_id);
-                                if (myRecord) combinedData.push({ ...myRecord, source: 'URL' });
-                            } catch (err) {}
-                        }
-                    }
+            container.innerHTML = '<p style="text-align:center; padding:20px; color:var(--muted);">กำลังโหลดข้อมูลจากระบบ...</p>';
+            
+            const today = new Date();
+            let html = "";
+            const dbDates = {};
+
+            // 1. ดึงจาก DB (เร็ว)
+            const { data: dbData } = await sbClient.from(TAS_CONFIG.TABLE_TARGET)
+                .select('work_date, time_in, time_out')
+                .eq('personnel_id', user.personnel_id)
+                .order('work_date', { ascending: false });
+
+            if (dbData) dbData.forEach(item => dbDates[item.work_date] = item);
+
+            // 2. สร้างรายการ 7 วันล่าสุดของหน้านั้นๆ
+            for (let i = 0; i < pageSize; i++) {
+                const targetDate = new Date();
+                targetDate.setDate(today.getDate() - (attPage * pageSize + i));
+                const dateISO = targetDate.toISOString().split('T')[0];
+                const dataInDB = dbDates[dateISO];
+
+                if (dataInDB) {
+                    html += renderItem(dataInDB, 'DB');
+                } else {
+                    // หากไม่มีใน DB ให้สร้างปุ่มกดเช็คจาก URL เอง (ไม่โหลดอัตโนมัติเพื่อประหยัดเวลา)
+                    html += `
+                    <div class="history-item">
+                        <div>
+                            <div class="item-date">${formatThaiDate(dateISO)}</div>
+                            <div class="item-source">ไม่มีในระบบหลัก</div>
+                        </div>
+                        <button class="btn-check-url" onclick="fetchFromURL('${dateISO}', this)">
+                            <i class="fas fa-sync-alt"></i> เช็คจากเว็บ
+                        </button>
+                    </div>`;
                 }
-                combinedData.sort((a, b) => new Date(b.work_date) - new Date(a.work_date));
-                const start = attPage * pageSizeAtt;
-                const paginatedData = combinedData.slice(start, start + pageSizeAtt);
-                let html = "";
-                paginatedData.forEach(item => {
-                    html += `<div class="history-item item-active"><div><div class="item-date">${formatThaiDate(item.work_date)}</div><div class="item-source">${item.source === 'DB' ? 'บันทึกระบบ' : 'รายงานภายนอก'}</div></div><div style="display:flex; gap:5px;"><span class="time-badge t-in">${item.time_in ? item.time_in.slice(0, 5) : '--:--'}</span><span class="time-badge t-out">${item.time_out ? item.time_out.slice(0, 5) : '--:--'}</span></div></div>`;
-                });
-                container.innerHTML = html || '<p style="text-align:center; padding:20px; color:var(--muted);">ไม่พบประวัติข้อมูล</p>';
-                document.getElementById('att-prev').disabled = attPage === 0;
-                document.getElementById('att-next').disabled = start + pageSizeAtt >= combinedData.length;
-            } catch (e) { container.innerHTML = 'Error loading data.'; }
+            }
+            container.innerHTML = html;
+            document.getElementById('att-prev').disabled = attPage === 0;
+        }
+
+        async function fetchFromURL(dateStr, btn) {
+            const originalHTML = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            
+            const targetDate = new Date(dateStr);
+            const dateURL = formatDateURL(targetDate);
+            const proxyURL = `https://api.allorigins.win/get?url=${encodeURIComponent(externalBaseURL + dateURL)}`;
+
+            try {
+                const res = await fetch(proxyURL);
+                const json = await res.json();
+                const records = parseHTML(json.contents, dateStr);
+                const myRecord = records.find(r => r.personnel_id === user.personnel_id);
+
+                if (myRecord) {
+                    const parent = btn.parentElement;
+                    parent.classList.add('item-url');
+                    parent.innerHTML = `
+                        <div>
+                            <div class="item-date">${formatThaiDate(dateStr)}</div>
+                            <div class="item-source">รายงานภายนอก (URL)</div>
+                        </div>
+                        <div style="display:flex; gap:5px;">
+                            <span class="time-badge t-in">${myRecord.time_in || '--:--'}</span>
+                            <span class="time-badge t-out">${myRecord.time_out || '--:--'}</span>
+                        </div>`;
+                } else {
+                    Swal.fire({ icon: 'info', title: 'ไม่พบข้อมูล', text: 'ไม่พบการลงเวลาในวันที่เลือกจากหน้าเว็บ' });
+                    btn.disabled = false; btn.innerHTML = originalHTML;
+                }
+            } catch (err) {
+                Swal.fire('ผิดพลาด', 'ไม่สามารถเชื่อมต่อเว็บรายงานได้', 'error');
+                btn.disabled = false; btn.innerHTML = originalHTML;
+            }
+        }
+
+        function renderItem(item, src) {
+            return `
+            <div class="history-item item-db">
+                <div>
+                    <div class="item-date">${formatThaiDate(item.work_date)}</div>
+                    <div class="item-source">บันทึกในระบบหลัก</div>
+                </div>
+                <div style="display:flex; gap:5px;">
+                    <span class="time-badge t-in">${item.time_in ? item.time_in.slice(0, 5) : '--:--'}</span>
+                    <span class="time-badge t-out">${item.time_out ? item.time_out.slice(0, 5) : '--:--'}</span>
+                </div>
+            </div>`;
         }
 
         async function loadLeaves() {
             const container = document.getElementById('leave-list');
-            container.innerHTML = '<p style="text-align:center; padding:20px; color:var(--muted);">กำลังโหลดรายการลา...</p>';
-            try {
-                const { data, error } = await sbClient.from('Leave_records').select('*', { count: 'exact' }).eq('personnel_id', user.personnel_id).neq('leave_type', 'ยกเว้น').order('leave_date', { ascending: false }).range(leavePage * pageSizeLeave, (leavePage + 1) * pageSizeLeave - 1);
-                if (error) throw error;
-                if (data && data.length > 0) {
-                    container.innerHTML = data.map(item => `
-                        <div class="history-item item-leave">
-                            <div>
-                                <div class="item-date">${formatThaiDate(item.leave_date)}</div>
-                                <div class="item-source">${item.leave_type}</div>
-                            </div>
-                            <div style="font-size:0.8rem; font-weight:700; color:var(--primary);">${item.status || 'อนุมัติ'}</div>
-                        </div>`).join('');
-                } else {
-                    container.innerHTML = '<p style="text-align:center; padding:20px; color:var(--muted);">ไม่พบประวัติการลา</p>';
-                }
-                document.getElementById('leave-prev').disabled = leavePage === 0;
-                document.getElementById('leave-next').disabled = (data ? data.length : 0) < pageSizeLeave;
-            } catch (e) {
-                container.innerHTML = '<p style="text-align:center; color:red;">เกิดข้อผิดพลาดในการดึงข้อมูล</p>';
-            }
+            const { data } = await sbClient.from('Leave_records').select('*').eq('personnel_id', user.personnel_id).neq('leave_type', 'ยกเว้น').order('leave_date', { ascending: false }).range(leavePage * 5, (leavePage + 1) * 5 - 1);
+            if (data && data.length > 0) {
+                container.innerHTML = data.map(item => `
+                    <div class="history-item item-leave">
+                        <div><div class="item-date">${formatThaiDate(item.leave_date)}</div><div class="item-source">${item.leave_type}</div></div>
+                        <div style="font-size:0.8rem; font-weight:700; color:var(--primary);">${item.status || 'อนุมัติ'}</div>
+                    </div>`).join('');
+            } else container.innerHTML = '<p style="text-align:center; padding:20px; color:var(--muted);">ไม่พบประวัติการลา</p>';
         }
 
-        function parseHTML(htmlString, dateStr) {
-            const parser = new DOMParser(), doc = parser.parseFromString(htmlString, "text/html"), table = doc.getElementById('mainTable'), records = [];
+        function parseHTML(html, d) {
+            const parser = new DOMParser(), doc = parser.parseFromString(html, "text/html"), table = doc.getElementById('mainTable'), recs = [];
             if (!table) return [];
             table.querySelectorAll('tbody tr').forEach(row => {
                 const cols = row.querySelectorAll('td');
-                if (cols.length >= 4) { records.push({ personnel_id: cols[0].innerText.trim(), work_date: dateStr, time_in: cols[2].innerText.trim(), time_out: cols[3].innerText.trim() }); }
-            }); return records;
+                if (cols.length >= 4) recs.push({ personnel_id: cols[0].innerText.trim(), time_in: cols[2].innerText.trim(), time_out: cols[3].innerText.trim() });
+            }); return recs;
         }
 
-        function formatDateURL(date) { const pad = (n) => String(n).padStart(2, '0'); return `${pad(date.getDate())}${pad(date.getMonth() + 1)}${date.getFullYear()}`; }
+        function formatDateURL(date) { const pad = (n) => String(n).padStart(2, '0'); return `${pad(date.getDate())}${pad(date.getMonth() + 1)}${date.getFullYear()}/`; }
         function formatThaiDate(s) { const d = new Date(s); return d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' }); }
         function changeAttPage(s) { attPage += s; loadAttendance(); }
         function changeLeavePage(s) { leavePage += s; loadLeaves(); }
-        
+
         async function changePassword() {
-            const { value: newPass } = await Swal.fire({ title: 'เปลี่ยนรหัสผ่าน', input: 'password', inputPlaceholder: 'ระบุรหัสผ่านใหม่', showCancelButton: true, confirmButtonText: 'บันทึก' });
+            const { value: newPass } = await Swal.fire({ title: 'เปลี่ยนรหัสผ่าน', input: 'password', showCancelButton: true });
             if (newPass) {
-                const { error } = await sbClient.from(TAS_CONFIG.TABLE_USER).update({ Password: newPass }).eq('personnel_id', user.personnel_id);
-                if (!error) { 
-                    user.Password = newPass; localStorage.setItem('tas_user', JSON.stringify(user)); 
-                    Swal.fire('สำเร็จ', 'บันทึกรหัสผ่านใหม่แล้ว', 'success'); 
-                }
+                await sbClient.from(TAS_CONFIG.TABLE_USER).update({ Password: newPass }).eq('personnel_id', user.personnel_id);
+                Swal.fire('สำเร็จ', 'บันทึกแล้ว', 'success');
             }
         }
     </script>
