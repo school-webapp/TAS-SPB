@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>โปรไฟล์ - TAS-SPB</title>
+    <style>
+        /* CSS ปรับแต่งให้สวยงามแสดงประวัติเป็น Timeline */
+        .profile-header { text-align: center; padding: 20px; background: white; border-radius: 16px; margin-bottom: 20px; }
+        .user-emoji { font-size: 4rem; margin-bottom: 10px; }
+        .history-card { background: white; padding: 15px; border-radius: 12px; margin-bottom: 15px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="profile-header">
+            <div class="user-emoji">👤</div>
+            <h2 id="disp-name">กำลังโหลด...</h2>
+            <p id="disp-id">ID: -</p>
+        </div>
+
+        <div id="pw-section" class="history-card">
+            <h3>🔐 จัดการรหัสผ่าน</h3>
+            <div id="first-time-setup" style="display:none; color: red; margin-bottom:10px;">
+                * กรุณากำหนดรหัสผ่านใหม่เพื่อเริ่มใช้งาน
+            </div>
+            <button class="btn-save" onclick="handleChangePassword()">เปลี่ยนรหัสผ่าน</button>
+        </div>
+
+        <div class="history-card">
+            <h3>🕒 ประวัติการลงเวลาล่าสุด</h3>
+            <div id="att-history">กำลังโหลด...</div>
+        </div>
+
+        <div class="history-card">
+            <h3>✈️ ประวัติการลา</h3>
+            <div id="leave-history">กำลังโหลด...</div>
+        </div>
+    </div>
+
+    <script src="supabase.js"></script>
+    <script src="config.js"></script>
+    <script>
+        const user = JSON.parse(localStorage.getItem('tas_user') || '{}');
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            if(!user.personnel_id) window.location.href='login.html';
+            
+            document.getElementById('disp-name').innerText = user.name || 'ยังไม่ระบุชื่อ';
+            document.getElementById('disp-id').innerText = `รหัสบุคลากร: ${user.personnel_id}`;
+
+            // เงื่อนไขเปิดมาครั้งแรก: รหัสพนักงานตรงกับรหัสผ่าน หรือ รหัสผ่านว่าง
+            if (user.personnel_id === user.Password || !user.Password) {
+                document.getElementById('first-time-setup').style.display = 'block';
+            }
+
+            loadHistory();
+        });
+
+        async function loadHistory() {
+            // ดึงข้อมูล TimeStamp จาก DB ของ user คนนั้นๆ
+            const { data: att } = await sbClient.from(TAS_CONFIG.TABLE_TARGET)
+                .select('*').eq('personnel_id', user.personnel_id).limit(10).order('work_date', {ascending: false});
+            
+            // ดึงข้อมูลการลา
+            const { data: leaves } = await sbClient.from('Leave_records')
+                .select('*').eq('personnel_id', user.personnel_id).limit(10);
+
+            // แสดงผลในรูปแบบ List ...
+        }
+
+        async function handleChangePassword() {
+            // Logic เปลี่ยนรหัสผ่านจากหน้า settings.html ที่คุณเคยมี
+            // เพิ่มการตรวจสอบชื่อ-สกุลหากเป็นการล็อกอินครั้งแรก
+        }
+    </script>
+</body>
+</html>
