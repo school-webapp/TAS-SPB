@@ -747,28 +747,109 @@
         window.handleAddClick = function () { if (currentTab === 'att') openAttModal(); else openLeaveModal(); }
 
         async function openAttModal() {
-            const date = document.getElementById('filterDate').value;
+            // ดึงวันที่จาก filterDate มาเป็นค่าเริ่มต้น
+            const filterDate = document.getElementById('filterDate').value;
             const curTime = new Date().toTimeString().slice(0, 5);
+            
             const { value: f } = await Swal.fire({
                 title: '➕ ลงเวลาทำงาน',
-                html: `<div class="modal-form"><div style="position:relative;"><label style="font-weight:bold;">ค้นหาพนักงาน:</label><input id="s-pid-att" class="date-input" placeholder="พิมพ์ชื่อ..." autocomplete="off"><div id="s-res-att" class="search-results"></div></div><div><label>พนักงาน:</label><input id="a-pid" class="date-input" readonly style="background:#f3f4f6"><input id="a-name" type="hidden"></div><div style="display:flex; gap:10px;"><div style="flex:1"><label>เวลา</label><input type="time" id="a-time" class="date-input" value="${curTime}"></div><div style="flex:1"><label>ประเภท</label><select id="a-type" class="date-input"><option value="in">เข้างาน</option><option value="out">เลิกงาน</option></select></div></div></div>`,
+                html: `
+                <div class="modal-form">
+                    <div style="position:relative;">
+                        <label style="font-weight:bold;">ค้นหาพนักงาน:</label>
+                        <input id="s-pid-att" class="date-input" placeholder="พิมพ์ชื่อ..." autocomplete="off">
+                        <div id="s-res-att" class="search-results"></div>
+                    </div>
+                    <div>
+                        <label>พนักงาน:</label>
+                        <input id="a-pid" class="date-input" readonly style="background:#f3f4f6">
+                        <input id="a-name" type="hidden">
+                    </div>
+                    
+                    <!-- เพิ่มส่วนเลือกวันที่ -->
+                    <div>
+                        <label style="font-weight:bold;">วันที่ทำงาน:</label>
+                        <input type="date" id="a-date" class="date-input" value="${filterDate}">
+                    </div>
+
+                    <div style="display:flex; gap:10px;">
+                        <div style="flex:1">
+                            <label>เวลา</label>
+                            <input type="time" id="a-time" class="date-input" value="${curTime}">
+                        </div>
+                        <div style="flex:1">
+                            <label>ประเภท</label>
+                            <select id="a-type" class="date-input">
+                                <option value="in">เข้างาน</option>
+                                <option value="out">เลิกงาน</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>`,
                 showCancelButton: true, confirmButtonText: 'บันทึก', cancelButtonText: 'ยกเลิก',
                 didOpen: () => setupSearch('s-pid-att', 's-res-att', 'a-pid', 'a-name'),
-                preConfirm: () => { const pid = document.getElementById('a-pid').value; if (!pid) return Swal.showValidationMessage('กรุณาเลือกพนักงาน'); return { pid: pid, name: document.getElementById('a-name').value, time: document.getElementById('a-time').value, type: document.getElementById('a-type').value } }
+                preConfirm: () => { 
+                    const pid = document.getElementById('a-pid').value; 
+                    const date = document.getElementById('a-date').value;
+                    if (!pid) return Swal.showValidationMessage('กรุณาเลือกพนักงาน'); 
+                    if (!date) return Swal.showValidationMessage('กรุณาเลือกวันที่'); 
+                    return { 
+                        pid: pid, 
+                        name: document.getElementById('a-name').value, 
+                        date: date,
+                        time: document.getElementById('a-time').value, 
+                        type: document.getElementById('a-type').value 
+                    } 
+                }
             });
+
             if (f) {
-                const { data: existing } = await sbClient.from(TAS_CONFIG.TABLE_TARGET).select('id,time_in,time_out').eq('personnel_id', f.pid).eq('work_date', date).maybeSingle();
+                // ใช้วันที่ที่เลือกจากฟอร์มแทนค่าจาก filterDate
+                const targetDate = f.date;
+
+                const { data: existing } = await sbClient.from(TAS_CONFIG.TABLE_TARGET)
+                    .select('id,time_in,time_out')
+                    .eq('personnel_id', f.pid)
+                    .eq('work_date', targetDate)
+                    .maybeSingle();
+
                 if (existing) {
                     let up = {};
                     if (f.type === 'in' && (!existing.time_in || f.time < existing.time_in)) up.time_in = f.time;
                     if (f.type === 'out' && (!existing.time_out || f.time > existing.time_out)) up.time_out = f.time;
-                    if (Object.keys(up).length > 0) { await sbClient.from(TAS_CONFIG.TABLE_TARGET).update(up).eq('id', existing.id); Swal.fire('อัปเดต', 'บันทึกเวลาที่ดีกว่าแล้ว', 'success'); }
-                    else Swal.fire('Info', 'เวลาเดิมดีกว่าอยู่แล้ว', 'info');
+                    
+                    // กรณีอยากบังคับอัปเดตแม้เวลาจะไม่ดีกว่าเดิม (Admin Override) อาจต้องพิจารณา Logic นี้อีกที
+                    // แต่เบื้องต้นใช้ Logic เดิมคืออัปเดตเฉพาะถ้ายังไม่มี หรือเวลาใหม่สมเหตุสมผลกว่า
+                    // หรือถ้า Admin ต้องการแก้จริงๆ อาจต้องเปลี่ยน Logic เป็น up.time_in = f.time เลยถ้าเลือก 'in'
+                    
+                    // ปรับปรุง: ให้ Admin แก้ไขได้เลยตามค่าที่กรอก (เพราะเป็นการจัดการข้อมูล)
+                    if (f.type === 'in') up.time_in = f.time;
+                    if (f.type === 'out') up.time_out = f.time;
+
+                    if (Object.keys(up).length > 0) { 
+                        await sbClient.from(TAS_CONFIG.TABLE_TARGET).update(up).eq('id', existing.id); 
+                        Swal.fire('อัปเดต', 'บันทึกข้อมูลเรียบร้อยแล้ว', 'success'); 
+                    } else {
+                        Swal.fire('Info', 'ไม่มีการเปลี่ยนแปลงข้อมูล', 'info');
+                    }
                 } else {
-                    await sbClient.from(TAS_CONFIG.TABLE_TARGET).insert([{ id: Date.now().toString(), personnel_id: f.pid, full_name: f.name, work_date: date, time_in: f.type === 'in' ? f.time : null, time_out: f.type === 'out' ? f.time : null, verified: 0 }]);
+                    await sbClient.from(TAS_CONFIG.TABLE_TARGET).insert([{ 
+                        id: Date.now().toString(), 
+                        personnel_id: f.pid, 
+                        full_name: f.name, 
+                        work_date: targetDate, 
+                        time_in: f.type === 'in' ? f.time : null, 
+                        time_out: f.type === 'out' ? f.time : null, 
+                        verified: 0 
+                    }]);
                     Swal.fire('สำเร็จ', 'บันทึกรายการใหม่', 'success');
                 }
-                loadAttendance();
+                
+                // ถ้าวันที่ที่ลงเวลา ตรงกับวันที่ที่กำลังดูอยู่ ให้รีโหลดตาราง
+                const currentViewDate = document.getElementById('filterDate').value;
+                if (targetDate === currentViewDate) {
+                    loadAttendance();
+                }
             }
         }
 
