@@ -9,7 +9,8 @@ const TAS_CONFIG = {
     // ชื่อตาราง (ต้องมีครบ 4 บรรทัดนี้)
     TABLE_USER: "Personnel",
     TABLE_SETTINGS: "Settings",
-    TABLE_TARGET: "TimeStamp"
+    TABLE_TARGET: "TimeStamp",
+    REPORT_CREDIT: "TAS-SPB System v.2.2.0 © 2026 Developed by Mr.Phairat In-Kuanchum"
 };
 
 // ==========================================
