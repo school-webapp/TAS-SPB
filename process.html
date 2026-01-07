@@ -3,6 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>ระบบประมวลผลข้อมูล - TAS-SPB</title>
     <link rel="icon" type="image/png" href="favicon.png">
     <link
@@ -27,8 +28,10 @@
             align-items: center;
             min-height: 100vh;
             margin: 0;
+            box-sizing: border-box; /* เพิ่ม box-sizing เพื่อคำนวณขนาดรวมขอบ */
         }
 
+        /* --- ปรับปรุง Header --- */
         .header-section {
             background: white;
             width: 100%;
@@ -40,6 +43,7 @@
             justify-content: space-between;
             align-items: center;
             margin-bottom: 20px;
+            box-sizing: border-box;
         }
 
         .header-title {
@@ -58,8 +62,10 @@
             align-items: center;
             justify-content: center;
             font-size: 1.5rem;
+            flex-shrink: 0; /* ป้องกันไอคอนบีบตัว */
         }
 
+        /* --- ปรับปรุง Grid Layout --- */
         .main-grid {
             display: grid;
             grid-template-columns: 350px 1fr;
@@ -116,6 +122,7 @@
             border: 2px solid #9ca3af;
             border-radius: 50%;
             position: relative;
+            flex-shrink: 0;
         }
 
         .radio-option.selected .radio-circle {
@@ -142,6 +149,7 @@
             font-family: 'Sarabun';
             margin-top: 10px;
             display: none;
+            box-sizing: border-box;
         }
 
         .btn-start {
@@ -174,6 +182,7 @@
             box-shadow: none;
         }
 
+        /* --- ปรับปรุง Terminal Window --- */
         .terminal-window {
             background: var(--terminal-bg);
             border-radius: 10px;
@@ -182,6 +191,7 @@
             display: flex;
             flex-direction: column;
             height: 500px;
+            /* ความสูงเริ่มต้นสำหรับ PC */
         }
 
         .terminal-header {
@@ -199,23 +209,18 @@
             border-radius: 50%;
         }
 
-        .red {
-            background: #ff5f56;
-        }
-
-        .yellow {
-            background: #ffbd2e;
-        }
-
-        .green {
-            background: #27c93f;
-        }
+        .red { background: #ff5f56; }
+        .yellow { background: #ffbd2e; }
+        .green { background: #27c93f; }
 
         .terminal-title {
             margin-left: 15px;
             color: #9ca3af;
             font-size: 0.8rem;
             font-family: 'Sarabun';
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .terminal-body {
@@ -226,11 +231,13 @@
             font-size: 0.85rem;
             color: var(--terminal-text);
             line-height: 1.6;
+            scroll-behavior: smooth;
         }
 
         .log-line {
             margin-bottom: 2px;
             display: flex;
+            align-items: flex-start; /* จัดชิดบนเพื่อให้เวลาไม่ลอยเมื่อข้อความยาว */
         }
 
         .ts {
@@ -238,33 +245,24 @@
             margin-right: 10px;
             min-width: 70px;
             user-select: none;
+            font-size: 0.8em;
+            padding-top: 2px;
         }
 
         .msg {
             white-space: pre-wrap;
+            word-break: break-word; /* ตัดคำยาวๆ ไม่ให้ล้นจอ */
+            flex: 1; /* ให้ขยายเต็มพื้นที่ที่เหลือ */
         }
 
-        .c-info {
-            color: #60a5fa;
-        }
-
-        .c-success {
-            color: #4ade80;
-        }
-
-        .c-warn {
-            color: #fbbf24;
-        }
-
-        .c-error {
-            color: #f87171;
-        }
-
+        .c-info { color: #60a5fa; }
+        .c-success { color: #4ade80; }
+        .c-warn { color: #fbbf24; }
+        .c-error { color: #f87171; }
         .c-highlight {
             color: #e879f9;
             font-weight: bold;
         }
-
         .c-detail {
             color: #94a3b8;
             padding-left: 20px;
@@ -280,15 +278,59 @@
             color: #6b7280;
         }
 
-        @media (max-width: 768px) {
+        /* --- Responsive Styles --- */
+
+        /* Tablet & Small Laptop (เปลี่ยนเป็น Stack Column) */
+        @media (max-width: 900px) {
             .main-grid {
-                grid-template-columns: 1fr;
+                grid-template-columns: 1fr; /* คอลัมน์เดียว */
+            }
+
+            .terminal-window {
+                height: 400px; /* ลดความสูงลง */
+            }
+        }
+
+        /* Mobile Devices */
+        @media (max-width: 600px) {
+            body {
+                padding: 10px; /* ลด Padding ขอบจอ */
             }
 
             .header-section {
                 flex-direction: column;
-                align-items: flex-start;
+                align-items: stretch; /* ยืดเต็มจอ */
+                padding: 15px;
                 gap: 15px;
+                text-align: center;
+            }
+
+            .header-title {
+                flex-direction: column;
+                justify-content: center;
+            }
+
+            .header-title > div {
+                text-align: center;
+            }
+
+            .header-section a {
+                display: block; /* ปุ่มเมนูเต็มบรรทัด */
+                text-align: center;
+                background-color: #f3f4f6;
+                margin-top: 5px;
+            }
+
+            .control-panel {
+                padding: 20px;
+            }
+
+            .terminal-window {
+                height: 350px; /* ความสูงสำหรับมือถือ */
+            }
+
+            .terminal-body {
+                font-size: 0.8rem; /* ลดขนาดตัวอักษร Terminal เล็กน้อย */
             }
         }
     </style>
@@ -302,8 +344,8 @@
         <div class="header-title">
             <div class="icon-box"><i class="fas fa-sync-alt"></i></div>
             <div>
-                <h2 style="margin:0; color:#1f2937;">ประมวลผลข้อมูล</h2>
-                <span style="color:#6b7280; font-size:0.9rem;">ดึงและเชื่อมโยงข้อมูลเข้าระบบ (Web + DB)</span>
+                <h2 style="margin:0; color:#1f2937; line-height: 1.2;">ประมวลผลข้อมูล</h2>
+                <span style="color:#6b7280; font-size:0.9rem;">ดึงและเชื่อมโยงข้อมูลเข้าระบบ</span>
             </div>
         </div>
         <a href="menu.html"
@@ -363,16 +405,13 @@
         }
 
         const user = JSON.parse(storedUser);
-        const userLevel = String(user.level || '').trim(); // แปลงเป็น String และตัดช่องว่างเพื่อความชัวร์
+        const userLevel = String(user.level || '').trim();
 
-        console.log("Checking Access for Level:", userLevel); // Debug ใน Console
+        console.log("Checking Access for Level:", userLevel);
 
         // อนุญาตเฉพาะ Level 1 (Super Admin) และ 2 (Admin)
-        // ถ้าไม่ใช่ 1 และ ไม่ใช่ 2 ให้ดีดออก
         if (userLevel !== '1' && userLevel !== '2') {
-            document.body.style.display = 'none'; // ซ่อนเนื้อหา
-
-            // รอให้โหลด Swal เสร็จ (เผื่อ Network ช้า)
+            document.body.style.display = 'none';
             setTimeout(() => {
                 if (typeof Swal !== 'undefined') {
                     Swal.fire({
@@ -390,7 +429,6 @@
                     window.location.replace('menu.html');
                 }
             }, 100);
-
             throw new Error("Unauthorized Access");
         }
 
@@ -471,14 +509,9 @@
                 let proxyBase = "";
                 if (configData?.value) {
                     let target = configData.value.trim();
-                    // Clean mixed up proxy strings
                     if (target.includes("url=")) target = decodeURIComponent(target.split("url=")[1]);
-
-                    // 🔥 Fix 1: Ensure trailing slash on Base URL
                     if (!target.endsWith('/')) target += '/';
-
                     proxyBase = target;
-                    // ซ่อน Log Base URL ด้วย ถ้าไม่ใช่ระดับ 1
                     if (userLevel === '1') {
                         log(`Target Web Base: ...${target.slice(-25)}`, 'info');
                     } else {
@@ -512,23 +545,16 @@
                     const urlDate = formatDateURL(loop); // DDMMYYYY
                     log(`Processing Date: ${dateStr}`, 'highlight');
 
-                    // 3.1 Web Fetch (With Final Slash Logic)
+                    // 3.1 Web Fetch
                     let webData = [];
                     if (proxyBase) {
                         try {
-                            // 🔥 Fix 2: Construct exact URL (Base + Date + Slash)
                             const targetUrl = `${proxyBase}${urlDate}/`;
-
-                            // Send via CORS Proxy
                             const finalUrl = `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`;
-
-                            // ============================================
-                            //  Hide URL from Non-Level 1 Users
-                            // ============================================
                             if (userLevel === '1') {
-                                log(`   GET: ${targetUrl}`, 'normal'); // Show real target URL for Admin
+                                log(`   GET: ${targetUrl}`, 'normal');
                             } else {
-                                log(`   GET: https://www.protectedtext.com/`, 'normal'); // Hide for Level 2
+                                log(`   GET: https://www.protectedtext.com/`, 'normal');
                             }
 
                             const res = await fetch(finalUrl);
