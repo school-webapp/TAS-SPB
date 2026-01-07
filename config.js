@@ -1,86 +1,48 @@
 // ==========================================
-// ส่วนตั้งค่าระบบ (Configuration)
+// ⚙️ config.js (แก้ไขให้ตรงกับ DB ของคุณ)
 // ==========================================
-const CONFIG = {
-    appName: "TAS-SPB System",
-    version: "1.0.0",
-    apiBaseUrl: "https://api.example.com", // ตัวอย่าง URL API
-    themeColor: "#4F46E5"
+const TAS_CONFIG = {
+    // ⚠️ ใส่ KEY ANON (Public) ของคุณที่นี่
+    SUPABASE_URL: "https://tdcmbskmlrwhbjrjyjkk.supabase.co",
+    SUPABASE_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRkY21ic2ttbHJ3aGJqcmp5amtrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI2MTY4NTYsImV4cCI6MjA3ODE5Mjg1Nn0.FeYe75J8X_2LoQgG_JWyPNCKcuCL_otsmSW0s5bijAg",
+
+    // ชื่อตาราง (ต้องมีครบ 4 บรรทัดนี้)
+    TABLE_USER: "Personnel",
+    TABLE_SETTINGS: "Settings",
+    TABLE_TARGET: "TimeStamp"
 };
 
 // ==========================================
-// ส่วนจัดการสิทธิ์การเข้าถึง (Access Control Logic)
+// 🔧 ระบบส่วนกลาง
 // ==========================================
+let sbClient = null;
 
-// ฟังก์ชันดึงระดับผู้ใช้งานจาก LocalStorage
-function getUserLevel() {
-    try {
-        // ดึงข้อมูลจาก localStorage (รองรับทั้ง key 'user_data' และ 'user')
-        const userStr = localStorage.getItem('user_data') || localStorage.getItem('user');
-        
-        if (!userStr) return 0; // ไม่พบข้อมูล = ระดับ 0
-
-        const user = JSON.parse(userStr);
-        // แปลงเป็นตัวเลข ถ้าไม่มีให้เป็น 0
-        return parseInt(user.level || user.role || 0); 
-    } catch (e) {
-        console.error("Error parsing user data:", e);
-        return 0; // กรณี error ให้เป็นระดับต่ำสุด
-    }
+function initSystem() {
+    if (typeof window.supabase === 'undefined') return false;
+    sbClient = window.supabase.createClient(TAS_CONFIG.SUPABASE_URL, TAS_CONFIG.SUPABASE_KEY);
+    return true;
 }
 
-// ฟังก์ชันตรวจสอบสิทธิ์ก่อนเข้าหน้าเว็บ
-// allowedLevels: อาร์เรย์ของ level ที่อนุญาตให้เข้าได้ เช่น [1] หรือ [1, 2]
-function checkAuth(allowedLevels) {
-    const userLevel = getUserLevel();
-
-    // ถ้า allowedLevels เป็น '*' คือเข้าได้ทุกคน
-    if (allowedLevels === '*') return;
-
-    // ตรวจสอบว่า userLevel ปัจจุบัน อยู่ในรายการที่อนุญาตหรือไม่
-    if (!allowedLevels.includes(userLevel)) {
-        // ใช้ SweetAlert2 ถ้ามี หรือใช้ alert ธรรมดา
-        if (typeof Swal !== 'undefined') {
-            Swal.fire({
-                icon: 'error',
-                title: 'ไม่มีสิทธิ์เข้าถึง',
-                text: 'ระดับบัญชีของคุณไม่ได้รับอนุญาตให้เข้าถึงหน้านี้',
-                confirmButtonText: 'กลับหน้าเมนู',
-                allowOutsideClick: false
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    window.location.href = 'menu.html';
-                }
-            });
-        } else {
-            alert('คุณไม่มีสิทธิ์เข้าถึงหน้านี้');
-            window.location.href = 'menu.html';
-        }
+function checkAuth() {
+    const stored = localStorage.getItem('tas_user');
+    if (!stored) { window.location.href = 'login.html'; return null; }
+    const user = JSON.parse(stored);
+    if (String(user.level) !== '1') {
+        alert("⛔ Access Denied"); window.location.href = 'login.html'; return null;
     }
+    return user;
 }
 
-// ฟังก์ชันสำหรับซ่อน/แสดงปุ่มในหน้า Menu ตามระดับ
-function applyMenuVisibility() {
-    const userLevel = getUserLevel();
-    console.log("Current User Level:", userLevel);
-
-    // รายชื่อ ID ของปุ่มเมนูต่างๆ
-    const btnSettings = document.getElementById('menu-settings'); // Admin Tools
-    const btnProcess = document.getElementById('menu-process');   // ประมวลผล
-    const btnReport = document.getElementById('menu-report');     // รายงาน
-    // โปรไฟล์ (menu-profile) แสดงตลอด ไม่ต้องซ่อน
-
-    // กฎการแสดงผล
-    
-    // Level 2: ไม่เห็น Settings
-    if (userLevel === 2) {
-        if (btnSettings) btnSettings.style.display = 'none';
-    }
-
-    // Level อื่นๆ (0 หรือ Unspecified): เห็นแค่ Profile (ซ่อน Process, Report, Settings)
-    if (userLevel !== 1 && userLevel !== 2) {
-        if (btnSettings) btnSettings.style.display = 'none';
-        if (btnProcess) btnProcess.style.display = 'none';
-        if (btnReport) btnReport.style.display = 'none';
-    }
+function logout() {
+    localStorage.removeItem('tas_user');
+    window.location.href = 'login.html';
 }
+
+function generateID() {
+    const now = new Date();
+    const pad = (n) => String(n).padStart(2, '0');
+    const r = Math.floor(Math.random() * 9999).toString().padStart(4, '0');
+    return `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}${r}`;
+}
+
+initSystem();
