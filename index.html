@@ -17,6 +17,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
+    <script src="config.js"></script>
+
     <style>
         :root {
             --primary: #4f46e5;
@@ -278,7 +280,7 @@
 
         .footer {
             margin-top: 30px;
-            font-size: 0.85rem;
+            font-size: 0.8rem;
             color: #9ca3af;
             text-align: center;
         }
@@ -328,7 +330,7 @@
         </button>
     </div>
 
-    <div class="footer">&copy; 2025 TAS-SPB Project. All rights reserved.</div>
+    <div id="appFooter" class="footer">TAS-SPB System</div>
 
     <div id="iosPrompt" class="ios-prompt-overlay" onclick="closeIosPrompt()">
         <div class="ios-prompt-card" onclick="event.stopPropagation()">
@@ -365,8 +367,14 @@
         let deferredPrompt;
         const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
 
-        // --- Logic หลัก: ตรวจสอบการเข้าใช้งาน ---
+        // --- Logic หลัก ---
         document.addEventListener('DOMContentLoaded', () => {
+            // 1. จัดการ Footer Credit จาก Config
+            if (typeof TAS_CONFIG !== 'undefined' && TAS_CONFIG.REPORT_CREDIT) {
+                document.getElementById('appFooter').innerText = TAS_CONFIG.REPORT_CREDIT;
+            }
+
+            // 2. ตรวจสอบการจำรหัสผ่าน
             const isRemembered = localStorage.getItem('tas_remember') === 'true';
             const userData = localStorage.getItem('tas_user');
 
@@ -413,7 +421,6 @@
                         // ถ้ากดยอมรับติดตั้ง ให้ซ่อนปุ่ม (หรือรอรีโหลดเข้าแอป)
                         installBtn.style.display = 'none';
                         installAlert.style.display = 'none';
-                        // อาจจะขึ้นข้อความให้เปิดผ่านแอป
                         alert('กำลังติดตั้ง... กรุณาเปิดใช้งานผ่านไอคอนบนหน้าจอโฮม');
                     }
                     deferredPrompt = null;
