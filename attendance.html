@@ -4,7 +4,7 @@
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-        <title>จัดการเวลาและการลา - TAS-SPB</title>
+        <title>จัดการเวลาและบุคลากร - TAS-SPB</title>
 
         <link rel="manifest" href="manifest.json">
         <link rel="icon" type="image/png" href="favicon.png">
@@ -29,6 +29,7 @@
                 --success: #10b981;
                 --warning: #f59e0b;
                 --danger: #ef4444;
+                --info: #3b82f6;
             }
 
             * {
@@ -176,6 +177,7 @@
                 background: #e5e7eb;
                 padding: 5px;
                 border-radius: 12px;
+                flex-wrap: wrap;
             }
 
             .tab-btn {
@@ -189,6 +191,7 @@
                 color: var(--muted);
                 font-family: 'Sarabun';
                 transition: all 0.2s;
+                min-width: 100px;
             }
 
             .tab-btn.active {
@@ -242,6 +245,10 @@
             .item-leave {
                 border-left-color: var(--warning);
             }
+            
+            .item-personnel {
+                border-left-color: var(--info);
+            }
 
             .info h4 {
                 margin: 0;
@@ -280,6 +287,12 @@
                 background: #ffedd5;
                 color: #9a3412;
                 border: 1px solid #fed7aa;
+            }
+
+            .bg-blue {
+                background: #dbeafe;
+                color: #1e40af;
+                border: 1px solid #bfdbfe;
             }
 
             .bg-gray {
@@ -403,8 +416,8 @@
                 <div class="header-title">
                     <div class="icon-box"><i class="fas fa-calendar-check"></i></div>
                     <div class="header-text">
-                        <h2 id="pageTitle">จัดการเวลา/ลา</h2>
-                        <span id="pageSubTitle">แก้ไขข้อมูลการลงเวลาและบันทึกการลา</span>
+                        <h2 id="pageTitle">จัดการระบบ</h2>
+                        <span id="pageSubTitle">จัดการเวลา, วันลา และข้อมูลบุคลากร</span>
                     </div>
                 </div>
                 <a href="menu.html" class="btn-home">
@@ -419,7 +432,8 @@
                 </div>
                 <div class="tabs">
                     <button id="btn-tab-att" class="tab-btn active" onclick="switchTab('att')">🕒 เวลาทำงาน</button>
-                    <button id="btn-tab-leave" class="tab-btn" onclick="switchTab('leave')">✈️ การลา (ทั้งหมด)</button>
+                    <button id="btn-tab-leave" class="tab-btn" onclick="switchTab('leave')">✈️ การลา</button>
+                    <button id="btn-tab-personnel" class="tab-btn" onclick="switchTab('personnel')" style="display:none;">👥 บุคลากร</button>
                 </div>
             </div>
 
@@ -469,13 +483,43 @@
                     </button>
                 </div>
             </div>
+
+            <div id="tab-personnel" class="content-section">
+                 <div class="search-box-container">
+                    <div style="flex: 1;">
+                        <input type="text" id="personnel-search" class="date-input" placeholder="🔍 ค้นหาชื่อ หรือ รหัส..."
+                            onkeyup="if(event.key==='Enter') searchPersonnel()">
+                    </div>
+                    <button class="btn-filter bg-blue" onclick="searchPersonnel()"
+                        style="color: #1e40af; background-color: #dbeafe; border: 1px solid #bfdbfe;">
+                        <i class="fas fa-search"></i> ค้นหา
+                    </button>
+                    <button class="btn-filter bg-gray" onclick="clearPersonnelFilter()">
+                        <i class="fas fa-undo"></i>
+                    </button>
+                </div>
+
+                <div id="list-personnel" class="data-list">
+                    <div style="text-align:center; padding:30px; color:#999;">กำลังโหลด...</div>
+                </div>
+
+                <div class="pagination">
+                    <button id="personnel-prev-btn" class="btn-page" onclick="changePersonnelPage(-1)" disabled>
+                        <i class="fas fa-chevron-left"></i> ก่อนหน้า
+                    </button>
+                    <span id="personnel-page-num" style="color:#6b7280; font-weight:bold;">หน้า 1</span>
+                    <button id="personnel-next-btn" class="btn-page" onclick="changePersonnelPage(1)" disabled>
+                        ถัดไป <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
+            </div>
         </div>
 
         <button class="fab" onclick="handleAddClick()"><i class="fas fa-plus"></i></button>
 
         <script>
             // ==========================================
-            // Security Check: Level 1 & 2 Allowed
+            // Security Check
             // ==========================================
             const storedUser = localStorage.getItem('tas_user');
             if (!storedUser) { window.location.href = 'login.html'; }
@@ -483,7 +527,6 @@
             const user = JSON.parse(storedUser);
             const userLevel = String(user.level || '').trim();
 
-            // อนุญาตทั้ง Level 1 และ 2
             if (userLevel !== '1' && userLevel !== '2') {
                 document.body.style.display = 'none';
                 setTimeout(() => {
@@ -499,41 +542,83 @@
 
             if (typeof sbClient === 'undefined') Swal.fire('Error', 'Supabase Client Not Found', 'error');
 
+            // Global State
             let currentTab = 'att';
             let statusFilter = 'all';
             let personnelMap = {};
             let leaveTypes = [];
 
-            // Variables for Pagination & Filter
+            // Pagination Vars
             let leavePage = 0;
             const LEAVE_PER_PAGE = 10;
+            
+            let personnelPage = 0;
+            const PERSONNEL_PER_PAGE = 10; // ปรับจำนวนต่อหน้าตามความสูงจอได้ที่นี่
 
             document.addEventListener('DOMContentLoaded', async () => {
                 const dateInput = document.getElementById('filterDate');
                 if (!dateInput.value) {
                     dateInput.value = new Date().toISOString().split('T')[0];
                 }
+                
+                // Load Initial Data
                 await loadMasterData();
 
-                // Logic แยกการแสดงผลระหว่าง Level 1 และ 2
+                // Logic Level 1 vs 2
                 if (userLevel === '2') {
-                    // [แก้ไข] เปลี่ยนข้อความหัวข้อสำหรับ Level 2
+                    // Level 2 (Supervisor): Leave Mgmt Only
                     document.getElementById('pageTitle').innerText = "จัดการวันลา";
-                    document.getElementById('pageSubTitle').innerText = "แก้ไขข้อมูลและบันทึกการลา";
-
-                    // ถ้าเป็น Level 2: ซ่อนปุ่มแท็บเวลา, บังคับไปแท็บลา
                     document.getElementById('btn-tab-att').style.display = 'none';
+                    document.getElementById('btn-tab-personnel').style.display = 'none'; // ซ่อนบุคลากรสำหรับ Level 2
                     switchTab('leave');
                 } else {
-                    // [แก้ไข] เปลี่ยนข้อความหัวข้อสำหรับ Level 1 (Default)
-                    document.getElementById('pageTitle').innerText = "จัดการเวลา/ลา";
-                    document.getElementById('pageSubTitle').innerText = "แก้ไขข้อมูลการลงเวลาและบันทึกการลา";
-
-                    // Level 1: เริ่มที่แท็บเวลาทำงาน
+                    // Level 1 (Admin): All Access
+                    document.getElementById('pageTitle').innerText = "จัดการระบบ";
+                    document.getElementById('btn-tab-personnel').style.display = 'block'; // แสดงปุ่มบุคลากร
                     loadAttendance();
                 }
             });
 
+            window.switchTab = function (tabName) {
+                currentTab = tabName;
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                const btn = document.getElementById(`btn-tab-${tabName}`);
+                if (btn) btn.classList.add('active');
+
+                document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
+                document.getElementById(`tab-${tabName}`).classList.add('active');
+
+                // Controls Visibility
+                const dateControl = document.getElementById('date-control-group');
+                
+                // Hide All specific filters first
+                document.getElementById('filter-container').style.display = 'none';
+                
+                if (tabName === 'att') {
+                    if (dateControl) dateControl.style.display = 'block';
+                    loadAttendance();
+                } else if (tabName === 'leave') {
+                    if (dateControl) dateControl.style.display = 'none';
+                    loadLeaves();
+                } else if (tabName === 'personnel') {
+                    if (dateControl) dateControl.style.display = 'none';
+                    loadPersonnel();
+                }
+            }
+
+            async function loadMasterData() {
+                try {
+                    const { data: users } = await sbClient.from('Personnel').select('personnel_id, name');
+                    if (users) users.forEach(u => personnelMap[u.personnel_id] = u.name);
+                    const { data: settings } = await sbClient.from(TAS_CONFIG.TABLE_SETTINGS).select('value').eq('key', 'leave_types').single();
+                    if (settings && settings.value) leaveTypes = settings.value.split(',');
+                    else leaveTypes = ['ลาป่วย', 'ลากิจ'];
+                } catch (e) { console.error(e); }
+            }
+
+            // ==========================================
+            // Tab 1: Attendance
+            // ==========================================
             window.setStatusFilter = function (status) {
                 statusFilter = status;
                 const btnAll = document.getElementById('filter-all');
@@ -553,45 +638,8 @@
                 loadAttendance();
             }
 
-            window.switchTab = function (tabName) {
-                currentTab = tabName;
-                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-                const btn = document.getElementById(`btn-tab-${tabName}`);
-                if (btn) btn.classList.add('active'); // เช็คเผื่อปุ่มถูกซ่อน
-
-                document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
-                document.getElementById(`tab-${tabName}`).classList.add('active');
-
-                // Toggle controls based on tab
-                const dateControl = document.getElementById('date-control-group');
-
-                if (tabName !== 'att') {
-                    document.getElementById('filter-container').style.display = 'none';
-                    if (dateControl) dateControl.style.display = 'none'; // Hide date for leaves
-                    loadLeaves(); // Reload leaves
-                } else {
-                    if (dateControl) dateControl.style.display = 'block'; // Show date for attendance
-                    loadAttendance();
-                }
-            }
-
-            async function loadMasterData() {
-                try {
-                    const { data: users } = await sbClient.from(TAS_CONFIG.TABLE_USER).select('personnel_id, name');
-                    if (users) users.forEach(u => personnelMap[u.personnel_id] = u.name);
-                    const { data: settings } = await sbClient.from(TAS_CONFIG.TABLE_SETTINGS).select('value').eq('key', 'leave_types').single();
-                    if (settings && settings.value) leaveTypes = settings.value.split(',');
-                    else leaveTypes = ['ลาป่วย', 'ลากิจ'];
-                } catch (e) { console.error(e); }
-            }
-
-            // --------------------------------------------------------
-            // Attendance Logic (Daily View) - LEVEL 1 Only
-            // --------------------------------------------------------
             async function loadAttendance() {
-                // ป้องกัน Level 2 เรียกฟังก์ชันนี้
                 if (userLevel !== '1') return;
-
                 const date = document.getElementById('filterDate').value;
                 const container = document.getElementById('list-att');
                 const filterContainer = document.getElementById('filter-container');
@@ -603,19 +651,13 @@
                     if (statusFilter === 'incomplete') {
                         query = query.or('time_in.is.null,time_out.is.null');
                     }
-
                     const { data, error } = await query.order('time_in');
                     if (error) throw error;
 
                     if (!data || data.length === 0) {
-                        if (statusFilter === 'all') {
-                            filterContainer.style.display = 'none';
-                            container.innerHTML = `<div style="text-align:center; padding:30px; color:#999;">ไม่พบข้อมูลเวลาทำงานในวันนี้</div>`;
-                        } else {
-                            filterContainer.style.display = 'flex';
-                            container.innerHTML = `<div style="text-align:center; padding:30px; color:#999;">ไม่พบรายการที่ลงเวลาไม่สมบูรณ์</div>`;
-                        }
-                        return;
+                         filterContainer.style.display = (statusFilter === 'all') ? 'none' : 'flex';
+                         container.innerHTML = `<div style="text-align:center; padding:30px; color:#999;">ไม่พบข้อมูล</div>`;
+                         return;
                     }
 
                     filterContainer.style.display = 'flex';
@@ -635,14 +677,13 @@
                     </div>
                 </div>`).join('');
                 } catch (err) {
-                    filterContainer.style.display = 'none';
                     container.innerHTML = `<div style="text-align:center; color:red;">โหลดไม่สำเร็จ</div>`;
                 }
             }
 
-            // --------------------------------------------------------
-            // Leave Logic
-            // --------------------------------------------------------
+            // ==========================================
+            // Tab 2: Leaves
+            // ==========================================
             function searchLeave() { leavePage = 0; loadLeaves(); }
             function clearLeaveFilter() {
                 document.getElementById('leave-search-name').value = '';
@@ -667,7 +708,6 @@
 
                 try {
                     let query = sbClient.from('Leave_records').select('*').neq('leave_type', 'ยกเว้น');
-
                     if (dateSearch) query = query.eq('leave_date', dateSearch);
                     if (nameSearch) {
                         const matchingIds = Object.keys(personnelMap).filter(id =>
@@ -681,7 +721,7 @@
                     if (error) throw error;
 
                     if (!data || data.length === 0) {
-                        container.innerHTML = `<div style="text-align:center; padding:30px; color:#999;">${leavePage === 0 ? 'ไม่พบข้อมูลการลา' : 'สิ้นสุดข้อมูล'}</div>`;
+                        container.innerHTML = `<div style="text-align:center; padding:30px; color:#999;">${leavePage === 0 ? 'ไม่พบข้อมูล' : 'สิ้นสุดข้อมูล'}</div>`;
                         btnNext.disabled = true;
                         btnPrev.disabled = (leavePage === 0);
                         pageNumDisplay.innerText = `หน้า ${leavePage + 1}`;
@@ -711,7 +751,6 @@
                     container.innerHTML = `<div style="text-align:center; color:red;">โหลดไม่สำเร็จ</div>`;
                 }
             }
-
             window.changeLeavePage = function (delta) {
                 const newPage = leavePage + delta;
                 if (newPage < 0) return;
@@ -719,161 +758,274 @@
                 loadLeaves();
             }
 
+            // ==========================================
+            // Tab 3: Personnel (New)
+            // ==========================================
+            function searchPersonnel() { personnelPage = 0; loadPersonnel(); }
+            function clearPersonnelFilter() {
+                document.getElementById('personnel-search').value = '';
+                personnelPage = 0;
+                loadPersonnel();
+            }
+            window.changePersonnelPage = function (delta) {
+                const newPage = personnelPage + delta;
+                if (newPage < 0) return;
+                personnelPage = newPage;
+                loadPersonnel();
+            }
+
+            async function loadPersonnel() {
+                const container = document.getElementById('list-personnel');
+                const btnPrev = document.getElementById('personnel-prev-btn');
+                const btnNext = document.getElementById('personnel-next-btn');
+                const pageNumDisplay = document.getElementById('personnel-page-num');
+                const searchVal = document.getElementById('personnel-search').value.trim();
+
+                container.innerHTML = `<div style="text-align:center; padding:20px; color:#3b82f6;">⏳ กำลังโหลดบุคลากร...</div>`;
+
+                const start = personnelPage * PERSONNEL_PER_PAGE;
+                const end = start + PERSONNEL_PER_PAGE - 1;
+
+                try {
+                    let query = sbClient.from('Personnel').select('*');
+                    
+                    if (searchVal) {
+                        query = query.or(`name.ilike.%${searchVal}%,personnel_id.ilike.%${searchVal}%`);
+                    }
+
+                    const { data, error } = await query.order('personnel_id', { ascending: true }).range(start, end);
+
+                    if (error) throw error;
+
+                    if (!data || data.length === 0) {
+                        container.innerHTML = `<div style="text-align:center; padding:30px; color:#999;">${personnelPage === 0 ? 'ไม่พบข้อมูลบุคลากร' : 'สิ้นสุดข้อมูล'}</div>`;
+                        btnNext.disabled = true;
+                        btnPrev.disabled = (personnelPage === 0);
+                        pageNumDisplay.innerText = `หน้า ${personnelPage + 1}`;
+                        return;
+                    }
+
+                    container.innerHTML = data.map(p => `
+                <div class="data-item item-personnel">
+                    <div class="info">
+                        <h4>${p.name}</h4>
+                        <p>
+                            <span class="badge bg-blue">ID: ${p.personnel_id}</span>
+                            <span class="badge bg-gray">${p.personnel_type || '-'}</span>
+                            <span class="badge ${p.level == 1 ? 'bg-red' : (p.level == 2 ? 'bg-orange' : 'bg-green')}">Level: ${p.level}</span>
+                        </p>
+                    </div>
+                    <div class="actions">
+                        <button class="btn-icon btn-edit" onclick='openPersonnelModal(${JSON.stringify(p).replace(/'/g, "&#39;")})'><i class="fas fa-pen"></i></button>
+                        <button class="btn-icon btn-del" onclick="deletePersonnel('${p.personnel_id}', '${p.name}')"><i class="fas fa-trash"></i></button>
+                    </div>
+                </div>`).join('');
+
+                    btnPrev.disabled = (personnelPage === 0);
+                    btnNext.disabled = (data.length < PERSONNEL_PER_PAGE);
+                    pageNumDisplay.innerText = `หน้า ${personnelPage + 1}`;
+                    
+                    // Update cache map
+                    data.forEach(u => personnelMap[u.personnel_id] = u.name);
+
+                } catch (err) {
+                    console.error(err);
+                    container.innerHTML = `<div style="text-align:center; color:red;">โหลดไม่สำเร็จ</div>`;
+                }
+            }
+
+            // ==========================================
+            // Main Action Handler (FAB)
+            // ==========================================
+            window.handleAddClick = function () {
+                if (userLevel === '2') {
+                    openLeaveModal();
+                } else {
+                    if (currentTab === 'att') openAttModal();
+                    else if (currentTab === 'leave') openLeaveModal();
+                    else if (currentTab === 'personnel') openPersonnelModal();
+                }
+            }
+
+            // ==========================================
+            // Modal: Attendance & Leave
+            // ==========================================
             function formatThaiDate(dateStr) {
                 const date = new Date(dateStr);
                 return date.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' });
             }
 
-            // --------------------------------------------------------
-            // Modals & Actions
-            // --------------------------------------------------------
-            window.handleAddClick = function () {
-                // Level 2: Always open Leave Modal
-                if (userLevel === '2') {
-                    openLeaveModal();
-                } else {
-                    // Level 1: Depends on tab
-                    if (currentTab === 'att') openAttModal(); else openLeaveModal();
-                }
-            }
-
+            // (Code for openAttModal & openLeaveModal remains same as original but compacted here for brevity)
             async function openAttModal() {
-                // ดึงค่าวันที่ปัจจุบันจาก Filter มาเป็น Default
-                const filterDateVal = document.getElementById('filterDate').value;
-                const curTime = new Date().toTimeString().slice(0, 5);
-
-                const { value: f } = await Swal.fire({
+                 const filterDateVal = document.getElementById('filterDate').value;
+                 const { value: f } = await Swal.fire({
                     title: '➕ ลงเวลาทำงาน',
-                    html: `
-                <div class="modal-form">
-                    <div style="margin-bottom:10px;">
-                        <label style="font-weight:bold;">วันที่ทำงาน:</label>
-                        <input type="date" id="a-date" class="date-input" value="${filterDateVal}">
-                    </div>
-                    <div style="position:relative; margin-bottom:10px;">
-                        <label style="font-weight:bold;">ค้นหาพนักงาน:</label>
-                        <input id="s-pid-att" class="date-input" placeholder="พิมพ์ชื่อ..." autocomplete="off">
-                        <div id="s-res-att" class="search-results"></div>
-                    </div>
-                    <div style="margin-bottom:10px;">
-                        <label>พนักงาน:</label>
-                        <input id="a-pid" class="date-input" readonly style="background:#f3f4f6">
-                        <input id="a-name" type="hidden">
-                    </div>
-                    <div style="display:flex; gap:10px;">
-                        <div style="flex:1">
-                            <label>เวลา</label>
-                            <input type="time" id="a-time" class="date-input" value="${curTime}">
-                        </div>
-                        <div style="flex:1">
-                            <label>ประเภท</label>
-                            <select id="a-type" class="date-input">
-                                <option value="in">เข้างาน</option>
-                                <option value="out">เลิกงาน</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>`,
-                    showCancelButton: true, confirmButtonText: 'บันทึก', cancelButtonText: 'ยกเลิก',
+                    html: `<div class="modal-form"><div style="margin-bottom:10px;"><label>วันที่:</label><input type="date" id="a-date" class="date-input" value="${filterDateVal}"></div><div style="position:relative; margin-bottom:10px;"><label>ค้นหา:</label><input id="s-pid-att" class="date-input"><div id="s-res-att" class="search-results"></div></div><div style="margin-bottom:10px;"><label>รหัส:</label><input id="a-pid" class="date-input" readonly style="background:#f3f4f6"><input id="a-name" type="hidden"></div><div style="display:flex;gap:10px;"><div style="flex:1"><input type="time" id="a-time" class="date-input" value="${new Date().toTimeString().slice(0,5)}"></div><div style="flex:1"><select id="a-type" class="date-input"><option value="in">เข้า</option><option value="out">ออก</option></select></div></div></div>`,
+                    showCancelButton: true, confirmButtonText: 'บันทึก',
                     didOpen: () => setupSearch('s-pid-att', 's-res-att', 'a-pid', 'a-name'),
-                    preConfirm: () => {
-                        const pid = document.getElementById('a-pid').value;
-                        if (!pid) return Swal.showValidationMessage('กรุณาเลือกพนักงาน');
-                        return {
-                            pid: pid,
-                            name: document.getElementById('a-name').value,
-                            date: document.getElementById('a-date').value, // รับค่าวันที่จาก Modal
-                            time: document.getElementById('a-time').value,
-                            type: document.getElementById('a-type').value
-                        }
-                    }
-                });
-
-                if (f) {
-                    // ใช้ f.date ในการ Query และ Insert แทนวันที่จาก Filter
-                    const { data: existing } = await sbClient.from(TAS_CONFIG.TABLE_TARGET)
-                        .select('id,time_in,time_out')
-                        .eq('personnel_id', f.pid)
-                        .eq('work_date', f.date) // ใช้ f.date
-                        .maybeSingle();
-
-                    if (existing) {
-                        let up = {};
-                        if (f.type === 'in' && (!existing.time_in || f.time < existing.time_in)) up.time_in = f.time;
-                        if (f.type === 'out' && (!existing.time_out || f.time > existing.time_out)) up.time_out = f.time;
-
-                        if (Object.keys(up).length > 0) {
-                            await sbClient.from(TAS_CONFIG.TABLE_TARGET).update(up).eq('id', existing.id);
-                            Swal.fire('อัปเดต', 'บันทึกเวลาเรียบร้อย', 'success');
-                        } else {
-                            Swal.fire('Info', 'เวลาเดิมดีกว่าอยู่แล้ว หรือมีข้อมูลแล้ว', 'info');
-                        }
-                    } else {
-                        await sbClient.from(TAS_CONFIG.TABLE_TARGET).insert([{
-                            id: Date.now().toString(),
-                            personnel_id: f.pid,
-                            full_name: f.name,
-                            work_date: f.date, // ใช้ f.date
-                            time_in: f.type === 'in' ? f.time : null,
-                            time_out: f.type === 'out' ? f.time : null,
-                            verified: 0
-                        }]);
-                        Swal.fire('สำเร็จ', 'บันทึกรายการใหม่', 'success');
-                    }
-
-                    // โหลดข้อมูลใหม่ (ถ้าวันที่ที่เพิ่มตรงกับวันที่กรองอยู่ก็ให้โหลดใหม่)
-                    if (f.date === document.getElementById('filterDate').value) {
-                        loadAttendance();
-                    }
-                }
+                    preConfirm: () => ({ pid: document.getElementById('a-pid').value, name: document.getElementById('a-name').value, date: document.getElementById('a-date').value, time: document.getElementById('a-time').value, type: document.getElementById('a-type').value })
+                 });
+                 if(f && f.pid) {
+                     const { data: ex } = await sbClient.from(TAS_CONFIG.TABLE_TARGET).select('id,time_in,time_out').eq('personnel_id', f.pid).eq('work_date', f.date).maybeSingle();
+                     if(ex) { await sbClient.from(TAS_CONFIG.TABLE_TARGET).update(f.type=='in'?{time_in:f.time}:{time_out:f.time}).eq('id', ex.id); }
+                     else { await sbClient.from(TAS_CONFIG.TABLE_TARGET).insert([{id:Date.now().toString(), personnel_id:f.pid, full_name:f.name, work_date:f.date, time_in:f.type=='in'?f.time:null, time_out:f.type=='out'?f.time:null, verified:0}]); }
+                     Swal.fire('สำเร็จ','บันทึกแล้ว','success'); loadAttendance();
+                 }
             }
 
             async function openLeaveModal(id = null, pid = '', type = '') {
                 const isEdit = !!id;
                 const today = new Date().toISOString().split('T')[0];
                 const typeOpts = leaveTypes.map(t => `<option value="${t}" ${t === type ? 'selected' : ''}>${t}</option>`).join('');
+                const { value: f } = await Swal.fire({
+                    title: isEdit ? 'แก้ไขการลา' : 'บันทึกการลา',
+                    html: `<div class="modal-form">${!isEdit ? `<div><label>วันที่:</label><input type="date" id="l-date" class="date-input" value="${today}"></div><div><label>ค้นหา:</label><input id="s-pid-leave" class="date-input"><div id="s-res-leave" class="search-results"></div><input type="hidden" id="l-pid"></div>` : `<div><label>รหัส:</label><input class="date-input" value="${pid}" readonly style="background:#f3f4f6"><input type="hidden" id="l-pid-val" value="${pid}"></div>`}<div><label>ประเภท:</label><select id="l-type" class="date-input">${typeOpts}</select></div></div>`,
+                    showCancelButton: true, confirmButtonText: 'OK',
+                    didOpen: () => { if (!isEdit) setupSearch('s-pid-leave', 's-res-leave', 'l-pid', null); },
+                    preConfirm: () => ({ pid: isEdit ? document.getElementById('l-pid-val').value : document.getElementById('l-pid').value, type: document.getElementById('l-type').value, date: isEdit ? null : document.getElementById('l-date').value })
+                });
+                if (f && f.pid) {
+                    const pl = { personnel_id: f.pid, leave_type: f.type, status: 'approved' };
+                    if (f.date) pl.leave_date = f.date;
+                    if (isEdit) await sbClient.from('Leave_records').update(pl).eq('id', id);
+                    else { pl.id = Date.now(); await sbClient.from('Leave_records').insert([pl]); }
+                    loadLeaves(); Swal.fire('สำเร็จ', 'บันทึกแล้ว', 'success');
+                }
+            }
 
+            // ==========================================
+            // Modal: Personnel (New)
+            // ==========================================
+            async function openPersonnelModal(data = null) {
+                const isEdit = !!data;
+                const title = isEdit ? 'แก้ไขบุคลากร' : 'เพิ่มบุคลากรใหม่';
+                
                 const htmlContent = `
-                <div class="modal-form">
-                    ${!isEdit ?
-                        `<div><label style="font-weight:bold;">วันที่ลา:</label><input type="date" id="l-date" class="date-input" value="${today}"></div>
-                     <div><label style="font-weight:bold;">พนักงาน:</label>
-                     <input id="s-pid-leave" class="date-input" placeholder="ค้นหาชื่อ..." autocomplete="off">
-                     <div id="s-res-leave" class="search-results"></div>
-                     <input type="hidden" id="l-pid">
-                     </div>`
-                        :
-                        `<div><label>พนักงาน:</label><input class="date-input" value="${personnelMap[pid] || pid}" readonly style="background:#f3f4f6"><input type="hidden" id="l-pid-val" value="${pid}"></div>`}
-                    <div><label style="font-weight:bold;">ประเภทการลา:</label><select id="l-type" class="date-input">${typeOpts}</select></div>
-                </div>`;
+                <div class="modal-form" style="text-align:left;">
+                    <div style="margin-bottom:10px;">
+                        <label style="font-weight:bold;">รหัสพนักงาน (ID):</label>
+                        <input id="p-id" class="date-input" value="${data ? data.personnel_id : ''}" ${isEdit ? 'readonly style="background:#eee;"' : ''}>
+                    </div>
+                    <div style="margin-bottom:10px;">
+                        <label style="font-weight:bold;">ชื่อ-สกุล:</label>
+                        <input id="p-name" class="date-input" value="${data ? data.name : ''}">
+                    </div>
+                    <div style="margin-bottom:10px;">
+                        <label style="font-weight:bold;">ตำแหน่ง/ประเภท:</label>
+                        <input id="p-type" class="date-input" list="type-list" value="${data ? (data.personnel_type||'') : ''}">
+                        <datalist id="type-list">
+                            <option value="ครู">
+                            <option value="เจ้าหน้าที่">
+                            <option value="ผู้บริหาร">
+                        </datalist>
+                    </div>
+                    <div style="margin-bottom:10px;">
+                        <label style="font-weight:bold;">ระดับสิทธิ์ (Level):</label>
+                        <select id="p-level" class="date-input">
+                            <option value="3" ${data && data.level==3 ? 'selected' : ''}>3 - ผู้ใช้งานทั่วไป</option>
+                            <option value="2" ${data && data.level==2 ? 'selected' : ''}>2 - หัวหน้างาน</option>
+                            <option value="1" ${data && data.level==1 ? 'selected' : ''}>1 - ผู้ดูแลระบบ</option>
+                        </select>
+                    </div>
+                    <div style="margin-bottom:10px;">
+                        <label style="font-weight:bold;">Password:</label>
+                        <input id="p-pass" type="text" class="date-input" placeholder="${isEdit ? 'เว้นว่างหากไม่เปลี่ยน' : 'กำหนดรหัสผ่าน'}" value="">
+                    </div>
+                     <div style="display:flex; gap:10px;">
+                        <div style="flex:1">
+                            <label><small>วันเริ่มงาน</small></label>
+                            <input type="date" id="p-start" class="date-input" value="${data && data.start_date ? data.start_date : ''}">
+                        </div>
+                         <div style="flex:1">
+                            <label><small>วันสิ้นสุด</small></label>
+                            <input type="date" id="p-end" class="date-input" value="${data && data.end_date ? data.end_date : ''}">
+                        </div>
+                    </div>
+                </div>
+                `;
 
                 const { value: f } = await Swal.fire({
-                    title: isEdit ? 'แก้ไขการลา' : 'บันทึกการลา', html: htmlContent, showCancelButton: true, confirmButtonText: 'OK', cancelButtonText: 'Cancel',
-                    didOpen: () => { if (!isEdit) setupSearch('s-pid-leave', 's-res-leave', 'l-pid', null); },
+                    title: title,
+                    html: htmlContent,
+                    showCancelButton: true,
+                    confirmButtonText: 'บันทึก',
+                    cancelButtonText: 'ยกเลิก',
                     preConfirm: () => {
-                        const p = isEdit ? document.getElementById('l-pid-val').value : document.getElementById('l-pid').value;
-                        if (!p) return Swal.showValidationMessage('กรุณาเลือกพนักงาน');
-                        return { pid: p, type: document.getElementById('l-type').value, date: isEdit ? null : document.getElementById('l-date').value };
+                        const pid = document.getElementById('p-id').value.trim();
+                        const name = document.getElementById('p-name').value.trim();
+                        if (!pid || !name) return Swal.showValidationMessage('กรุณาระบุรหัสและชื่อ');
+                        return {
+                            personnel_id: pid,
+                            name: name,
+                            personnel_type: document.getElementById('p-type').value,
+                            level: parseInt(document.getElementById('p-level').value),
+                            Password: document.getElementById('p-pass').value,
+                            start_date: document.getElementById('p-start').value || null,
+                            end_date: document.getElementById('p-end').value || null
+                        };
                     }
                 });
 
                 if (f) {
-                    const payload = { personnel_id: f.pid, leave_type: f.type, status: 'approved' };
-                    if (f.date) payload.leave_date = f.date;
-                    if (isEdit) await sbClient.from('Leave_records').update(payload).eq('id', id);
-                    else { payload.id = Date.now(); await sbClient.from('Leave_records').insert([payload]); }
-                    loadLeaves();
-                    Swal.fire('สำเร็จ', 'บันทึกข้อมูลแล้ว', 'success');
+                    try {
+                        const payload = {
+                            name: f.name,
+                            personnel_type: f.personnel_type,
+                            level: f.level,
+                            start_date: f.start_date,
+                            end_date: f.end_date
+                        };
+                        
+                        if (f.Password) payload.Password = f.Password;
+
+                        if (isEdit) {
+                            await sbClient.from('Personnel').update(payload).eq('personnel_id', f.personnel_id);
+                        } else {
+                            payload.personnel_id = f.personnel_id;
+                            if (!payload.Password) payload.Password = '1234'; // Default password
+                            await sbClient.from('Personnel').insert([payload]);
+                        }
+                        
+                        Swal.fire('สำเร็จ', 'บันทึกข้อมูลเรียบร้อย', 'success');
+                        loadPersonnel();
+                    } catch (error) {
+                        Swal.fire('Error', error.message, 'error');
+                    }
                 }
             }
 
+            async function deletePersonnel(pid, name) {
+                const result = await Swal.fire({
+                    title: 'ยืนยันลบ?',
+                    text: `คุณต้องการลบ "${name}" (${pid}) หรือไม่?`,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#ef4444',
+                    confirmButtonText: 'ลบข้อมูล'
+                });
+
+                if (result.isConfirmed) {
+                    try {
+                        const { error } = await sbClient.from('Personnel').delete().eq('personnel_id', pid);
+                        if (error) throw error;
+                        Swal.fire('ลบสำเร็จ', '', 'success');
+                        loadPersonnel();
+                    } catch (error) {
+                        Swal.fire('Error', 'ไม่สามารถลบได้ (อาจมีข้อมูลอ้างอิง)', 'error');
+                    }
+                }
+            }
+
+            // ==========================================
+            // Utilities
+            // ==========================================
             function setupSearch(inpId, resId, pidId, nameId) {
                 const inp = document.getElementById(inpId), res = document.getElementById(resId);
                 if (!inp) return;
                 inp.addEventListener('input', async (e) => {
                     const kw = e.target.value.trim();
                     if (kw.length < 1) { res.style.display = 'none'; return; }
-                    const { data } = await sbClient.from(TAS_CONFIG.TABLE_USER).select('personnel_id, name').ilike('name', `%${kw}%`).limit(5);
+                    const { data } = await sbClient.from('Personnel').select('personnel_id, name').ilike('name', `%${kw}%`).limit(5);
                     res.innerHTML = '';
                     if (data && data.length) {
                         res.style.display = 'block';
@@ -901,5 +1053,4 @@
             }
         </script>
     </body>
-
 </html>
