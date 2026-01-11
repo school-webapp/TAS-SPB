@@ -284,7 +284,7 @@
                     adminArea.style.display = 'block';
 
                     // [แก้ไข] เปลี่ยนชื่อเมนูสำหรับ Level 1
-                    if (mAtt) mAtt.querySelector('.menu-title').innerText = "จัดการเวลา/ลา";
+                    if (mAtt) mAtt.querySelector('.menu-title').innerText = "จัดการเวลา/ลา/บุคลากร";
                 }
                 else if (level === '2') {
                     // ระดับ 2: เปิด Admin Area แต่ซ่อนเฉพาะ "ตั้งค่าระบบ"
@@ -293,14 +293,14 @@
                     if (mSettings) mSettings.style.display = 'none'; // ซ่อนตั้งค่า
 
                     // [แก้ไข] เปลี่ยนชื่อเมนูสำหรับ Level 2
-                    if (mAtt) mAtt.querySelector('.menu-title').innerText = "จัดการวันลา";
+                    if (mAtt) mAtt.querySelector('.menu-title').innerText = "จัดการการลา/บุคลากร";
                 }
                 else {
                     // ระดับ 0 หรืออื่นๆ: ซ่อนส่วน Admin ทั้งหมด
                     adminArea.style.display = 'none';
                 }
 
-                // --- [แก้ไข] แสดง Version จาก Config ไฟล์เดียวกับ Report ---
+                // แสดง Version จาก Config ไฟล์เดียวกับ Report
                 if (typeof TAS_CONFIG !== 'undefined' && TAS_CONFIG.REPORT_CREDIT) {
                     document.getElementById('vText').innerText = TAS_CONFIG.REPORT_CREDIT;
                 }
