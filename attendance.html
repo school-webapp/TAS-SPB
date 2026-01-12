@@ -16,6 +16,11 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <script src="ios-fix.js"></script>
+    <script src="supabase.js"></script>
+    <script src="sweetalert2.js"></script>
+    <script src="config.js"></script>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
     <style>
         :root {
@@ -126,12 +131,33 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
-        /* Data Items */
+        /* Data Items & Capture Animation */
         .data-list { display: grid; gap: 15px; }
         .data-item {
             background: var(--white); padding: 15px; border-radius: 12px;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05); border-left: 5px solid transparent;
             display: flex; justify-content: space-between; align-items: center;
+            
+            /* Long Press Styles */
+            transition: transform 0.2s, background-color 0.2s;
+            user-select: none; /* ห้ามคลุมดำ */
+            -webkit-user-select: none;
+            -webkit-touch-callout: none; /* ห้ามเมนู iOS */
+        }
+        
+        .data-item.pressing {
+            transform: scale(0.97);
+            background-color: #fefce8; /* เหลืองอ่อน */
+        }
+
+        .data-item.captured {
+            animation: flash 0.5s;
+        }
+
+        @keyframes flash {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; background-color: #fff; }
+            100% { opacity: 1; }
         }
 
         .item-att { border-left-color: var(--primary-color); }
@@ -188,10 +214,6 @@
             .search-box-container { flex-direction: column; }
         }
     </style>
-
-    <script src="supabase.js"></script>
-    <script src="sweetalert2.js"></script>
-    <script src="config.js"></script>
 </head>
 
 <body>
@@ -380,6 +402,122 @@
         }
 
         // ==========================================
+        // Feature: Long Press to Capture
+        // ==========================================
+        function attachLongPress(containerId) {
+            const container = document.getElementById(containerId);
+            const items = container.querySelectorAll('.data-item');
+
+            items.forEach(item => {
+                let pressTimer;
+                const duration = 3000; // 3 seconds
+
+                const startPress = (e) => {
+                    // Ignore clicks on buttons inside the item
+                    if (e.target.closest('button')) return;
+
+                    item.classList.add('pressing');
+                    
+                    pressTimer = setTimeout(() => {
+                        item.classList.remove('pressing');
+                        item.classList.add('captured');
+                        setTimeout(() => item.classList.remove('captured'), 500);
+                        
+                        // Vibrate if supported
+                        if (navigator.vibrate) navigator.vibrate(100);
+                        
+                        // Capture
+                        captureAndShare(item);
+                    }, duration);
+                };
+
+                const cancelPress = () => {
+                    clearTimeout(pressTimer);
+                    item.classList.remove('pressing');
+                };
+
+                // Mouse events
+                item.addEventListener('mousedown', startPress);
+                item.addEventListener('mouseup', cancelPress);
+                item.addEventListener('mouseleave', cancelPress);
+
+                // Touch events
+                item.addEventListener('touchstart', startPress, { passive: true });
+                item.addEventListener('touchend', cancelPress);
+                item.addEventListener('touchmove', cancelPress); // Cancel if scrolling
+            });
+        }
+
+        async function captureAndShare(element) {
+            Swal.fire({
+                title: 'กำลังประมวลผล...',
+                html: 'กรุณารอสักครู่ กำลังสร้างรูปภาพ',
+                timerProgressBar: true,
+                didOpen: () => { Swal.showLoading(); }
+            });
+
+            try {
+                // Temporarily hide action buttons
+                const actionsDiv = element.querySelector('.actions');
+                if(actionsDiv) actionsDiv.style.visibility = 'hidden';
+
+                const canvas = await html2canvas(element, {
+                    backgroundColor: '#ffffff',
+                    scale: 2 // Higher resolution
+                });
+
+                // Restore action buttons
+                if(actionsDiv) actionsDiv.style.visibility = 'visible';
+
+                const dataUrl = canvas.toDataURL('image/png');
+
+                Swal.fire({
+                    title: '📸 บันทึกรายการ',
+                    imageUrl: dataUrl,
+                    imageAlt: 'Captured Item',
+                    showDenyButton: true,
+                    showCancelButton: true,
+                    confirmButtonText: '<i class="fas fa-share-alt"></i> แชร์',
+                    denyButtonText: '<i class="fas fa-download"></i> บันทึกรูป',
+                    cancelButtonText: 'ปิด',
+                    confirmButtonColor: '#3b82f6',
+                    denyButtonColor: '#10b981'
+                }).then(async (result) => {
+                    if (result.isConfirmed) {
+                        // Share
+                        if (navigator.share) {
+                            const blob = await (await fetch(dataUrl)).blob();
+                            const file = new File([blob], "tas-card.png", { type: blob.type });
+                            try {
+                                await navigator.share({
+                                    files: [file],
+                                    title: 'TAS-SPB Card',
+                                    text: 'ข้อมูลรายการจากระบบ TAS-SPB'
+                                });
+                            } catch (err) {
+                                console.log('Share canceled/failed', err);
+                            }
+                        } else {
+                            Swal.fire('ขออภัย', 'อุปกรณ์ของคุณไม่รองรับการแชร์โดยตรง', 'info');
+                        }
+                    } else if (result.isDenied) {
+                        // Download
+                        const link = document.createElement('a');
+                        link.download = `tas-card-${Date.now()}.png`;
+                        link.href = dataUrl;
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                    }
+                });
+
+            } catch (error) {
+                console.error(error);
+                Swal.fire('Error', 'ไม่สามารถสร้างรูปภาพได้', 'error');
+            }
+        }
+
+        // ==========================================
         // Tab 1: Attendance
         // ==========================================
         window.setStatusFilter = function (status) {
@@ -432,6 +570,10 @@
                     <button class="btn-icon btn-del" onclick="delAtt('${r.id}')"><i class="fas fa-trash"></i></button>
                 </div>
             </div>`).join('');
+            
+            // Activate Long Press
+            attachLongPress('list-att');
+
             } catch (err) { container.innerHTML = `<div style="text-align:center; color:red;">โหลดไม่สำเร็จ</div>`; }
         }
 
@@ -484,6 +626,10 @@
                     <button class="btn-icon btn-del" onclick="delLeave('${r.id}')"><i class="fas fa-trash"></i></button>
                 </div>
             </div>`).join('');
+            
+                // Activate Long Press
+                attachLongPress('list-leave');
+
                 btnPrev.disabled = (leavePage === 0); btnNext.disabled = (data.length < LEAVE_PER_PAGE);
                 pageNumDisplay.innerText = `หน้า ${leavePage + 1}`;
             } catch (err) { container.innerHTML = `<div style="text-align:center; color:red;">โหลดไม่สำเร็จ</div>`; }
@@ -556,6 +702,9 @@
                         ${actionsHtml}
                     </div>`;
                 }).join('');
+
+                // Activate Long Press
+                attachLongPress('list-personnel');
 
                 btnPrev.disabled = (personnelPage === 0);
                 btnNext.disabled = (data.length < PERSONNEL_PER_PAGE);
