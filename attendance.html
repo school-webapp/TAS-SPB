@@ -477,22 +477,30 @@
                 const blob = await (await fetch(dataUrl)).blob();
                 const file = new File([blob], "tas-card.png", { type: blob.type });
 
-                // 5. Result Popup (Icon Only)
+                // เช็คว่าเป็นมือถือหรือไม่
+                const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+                // 5. Result Popup
                 Swal.fire({
                     title: '', 
                     text: '',
                     imageUrl: dataUrl,
                     imageAlt: 'Captured Item',
-                    showCancelButton: true,
-                    showConfirmButton: true,
-                    showDenyButton: false,
                     
-                    // ปุ่มมีแค่ไอคอน share
+                    // Button Config
+                    showConfirmButton: true, // Share button
                     confirmButtonText: '<i class="fas fa-share-alt" style="font-size: 1.2rem;"></i>',
                     confirmButtonColor: '#007aff',
-                    cancelButtonText: 'ปิด',
+                    
+                    showDenyButton: !isMobile, // Save button (Only for PC)
+                    denyButtonText: '<i class="fas fa-download" style="font-size: 1.2rem;"></i>',
+                    denyButtonColor: '#10b981',
+
+                    showCancelButton: false, // NO Close button (Click outside to close)
+                    allowOutsideClick: true,
                     padding: '1em'
                 }).then(async (result) => {
+                    // --- Share Logic ---
                     if (result.isConfirmed) {
                         if (navigator.share) {
                             try {
@@ -504,7 +512,7 @@
                                 console.log('Share closed', err);
                             }
                         } else {
-                            // Fallback PC
+                            // Fallback if Share not supported (e.g. old PC browsers) -> Download
                             const link = document.createElement('a');
                             link.download = `tas-card-${Date.now()}.png`;
                             link.href = dataUrl;
@@ -512,6 +520,15 @@
                             link.click();
                             document.body.removeChild(link);
                         }
+                    }
+                    // --- Download Logic (PC Only) ---
+                    else if (result.isDenied) {
+                        const link = document.createElement('a');
+                        link.download = `tas-card-${Date.now()}.png`;
+                        link.href = dataUrl;
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
                     }
                 });
 
