@@ -443,11 +443,12 @@
         }
 
         async function captureAndShare(element) {
-            // 1. แสดง Loading
+            // 1. แสดง Loading (ซ่อนพื้นหลังเล็กน้อย)
             Swal.fire({
-                title: 'กำลังประมวลผล...',
-                html: 'กำลังสร้างรูปภาพ...',
+                title: '',
+                text: 'กำลังสร้างรูปภาพ...',
                 allowOutsideClick: false,
+                showConfirmButton: false,
                 didOpen: () => { Swal.showLoading(); }
             });
 
@@ -476,18 +477,20 @@
                 const blob = await (await fetch(dataUrl)).blob();
                 const file = new File([blob], "tas-card.png", { type: blob.type });
 
-                // 5. แสดงผลลัพธ์ (มีปุ่มเดียว)
+                // 5. แสดงผลลัพธ์ (ไม่มี Title, มีแค่ปุ่มแชร์และปิด)
                 Swal.fire({
-                    title: 'รูปภาพพร้อมแล้ว',
+                    title: '', // เอา Title ออก
+                    text: '',  // เอา Text ออก
                     imageUrl: dataUrl,
                     imageAlt: 'Captured Item',
                     showCancelButton: true,
                     showConfirmButton: true,
-                    showDenyButton: false, // เอาปุ่ม Download ออก
+                    showDenyButton: false, // เอาปุ่ม Download ออกแล้ว
                     
-                    confirmButtonText: '<i class="fas fa-share-alt"></i> แชร์ / บันทึกรูป',
+                    confirmButtonText: '<i class="fas fa-share-alt"></i> แชร์',
                     confirmButtonColor: '#007aff',
-                    cancelButtonText: 'ปิด'
+                    cancelButtonText: 'ปิด',
+                    padding: '1em'
                 }).then(async (result) => {
                     if (result.isConfirmed) {
                         if (navigator.share) {
@@ -500,7 +503,7 @@
                                 console.log('Share closed', err);
                             }
                         } else {
-                            // Fallback สำหรับ PC ที่ไม่มีปุ่ม Share
+                            // Fallback สำหรับ PC (ถ้าแชร์ไม่ได้ ให้โหลดแทน)
                             const link = document.createElement('a');
                             link.download = `tas-card-${Date.now()}.png`;
                             link.href = dataUrl;
