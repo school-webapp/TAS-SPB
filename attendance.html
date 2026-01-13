@@ -51,6 +51,7 @@
 
         .container { max-width: 1000px; margin: 0 auto; width: 100%; }
 
+        /* Header */
         .header-section {
             background: white;
             width: 100%;
@@ -78,6 +79,7 @@
             transition: 0.2s; display: flex; align-items: center; gap: 5px;
         }
 
+        /* Controls */
         .controls-card {
             background: var(--white); padding: 20px; border-radius: 16px;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05); margin-bottom: 20px;
@@ -143,7 +145,7 @@
         .btn-page { padding: 8px 16px; border-radius: 12px; border: none; background: white; color: var(--text); font-weight: bold; cursor: pointer; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05); display: flex; align-items: center; gap: 5px; }
         .btn-page:disabled { opacity: 0.5; cursor: not-allowed; }
 
-        /* Search Dropdown สำหรับ TimeStamp */
+        /* Search Results สำหรับ TimeStamp Tab */
         .search-results { position: absolute; background: white; width: 100%; z-index: 10; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); display: none; margin-top: 2px; border: 1px solid #ddd; }
         .search-item { padding: 10px; cursor: pointer; border-bottom: 1px solid #eee; }
         .search-item:hover { background: #f9fafb; }
@@ -216,7 +218,7 @@
     <button class="fab" onclick="handleAddClick()"><i class="fas fa-plus"></i></button>
 
     <script>
-        // --- Security & Global State ---
+        // --- Global State & Config ---
         const user = JSON.parse(localStorage.getItem('tas_user') || '{}');
         const userLevel = String(user.level || '').trim();
         if (!user.personnel_id) window.location.href = 'login.html';
@@ -229,11 +231,11 @@
         const PAGE_SIZE = 10;
 
         document.addEventListener('DOMContentLoaded', async () => {
-            const dInput = document.getElementById('filterDate');
-            if (!dInput.value) dInput.value = new Date().toISOString().split('T')[0];
+            const dateInput = document.getElementById('filterDate');
+            if (!dateInput.value) dateInput.value = new Date().toISOString().split('T')[0];
             
             await loadMasterData();
-            
+
             if (userLevel === '2') {
                 document.getElementById('btn-tab-att').style.display = 'none';
                 document.getElementById('btn-tab-personnel').style.display = 'block';
@@ -245,10 +247,12 @@
         });
 
         async function loadMasterData() {
-            const { data } = await sbClient.from('Personnel').select('personnel_id, name');
-            if (data) data.forEach(p => personnelMap[p.personnel_id] = p.name);
-            const { data: st } = await sbClient.from('Settings').select('value').eq('key', 'leave_types').single();
-            leaveTypes = st ? st.value.split(',') : ['ลาป่วย', 'ลากิจ', 'ลาพักร้อน'];
+            try {
+                const { data } = await sbClient.from('Personnel').select('personnel_id, name');
+                if (data) data.forEach(p => personnelMap[p.personnel_id] = p.name);
+                const { data: st } = await sbClient.from('Settings').select('value').eq('key', 'leave_types').single();
+                leaveTypes = st ? st.value.split(',') : ['ลาป่วย', 'ลากิจ', 'ลาพักร้อน'];
+            } catch (e) { console.error(e); }
         }
 
         window.switchTab = (tab) => {
@@ -267,7 +271,7 @@
         };
 
         // ==========================================
-        // 🕒 TimeStamp Functions
+        // 🕒 ATTENDANCE (TimeStamp Table)
         // ==========================================
         window.setStatusFilter = (s) => {
             statusFilter = s;
@@ -310,50 +314,92 @@
         }
 
         // ==========================================
-        // ✈️ Leave Functions (With Dropdown logic)
+        // ✈️ LEAVES (Improved Section)
         // ==========================================
-        async function getAbsentPersonnel(date) {
-            const { data: allP } = await sbClient.from('Personnel').select('personnel_id, name').order('name');
-            const { data: att } = await sbClient.from('TimeStamp').select('personnel_id').eq('work_date', date);
-            const { data: leave } = await sbClient.from('Leave_records').select('personnel_id').eq('leave_date', date);
 
-            const activeIds = new Set([
-                ...(att || []).map(a => String(a.personnel_id)),
-                ...(leave || []).map(l => String(l.personnel_id))
-            ]);
-            return allP.filter(p => !activeIds.has(String(p.personnel_id)));
+        // ฟังก์ชันดึงรายชื่อที่ยังไม่ได้ลงเวลา/ลา ในวันที่เลือก
+        async function getAbsentPersonnelByDate(selectedDate) {
+            try {
+                const { data: allP } = await sbClient.from('Personnel').select('personnel_id, name').order('name');
+                const { data: att } = await sbClient.from('TimeStamp').select('personnel_id').eq('work_date', selectedDate);
+                const { data: leave } = await sbClient.from('Leave_records').select('personnel_id').eq('leave_date', selectedDate);
+
+                const activeIds = new Set([
+                    ...(att || []).map(a => String(a.personnel_id)),
+                    ...(leave || []).map(l => String(l.personnel_id))
+                ]);
+                return allP.filter(p => !activeIds.has(String(p.personnel_id)));
+            } catch (e) { return []; }
+        }
+
+        // รีเฟรช Dropdown เมื่อเปลี่ยนวันที่ใน Modal
+        async function refreshAbsentDropdown(selectedDate) {
+            const selectEl = document.getElementById('l-pid');
+            const tipEl = document.getElementById('l-absent-tip');
+            if (!selectEl) return;
+
+            selectEl.innerHTML = '<option value="">⏳ กำลังโหลด...</option>';
+            const list = await getAbsentPersonnelByDate(selectedDate);
+            
+            if (list.length === 0) {
+                selectEl.innerHTML = '<option value="">-- ครบทุกคนแล้ว --</option>';
+                tipEl.innerHTML = '❌ ไม่มีคนขาดในวันที่เลือก';
+                tipEl.style.color = 'red';
+            } else {
+                selectEl.innerHTML = list.map(p => `<option value="${p.personnel_id}">${p.name}</option>`).join('');
+                tipEl.innerHTML = `✅ พบผู้ที่ยังไม่ได้ลงเวลา ${list.length} คน`;
+                tipEl.style.color = 'green';
+            }
         }
 
         async function openLeaveModal(id = null, pid = '', type = '') {
             const isEdit = !!id;
-            const date = document.getElementById('filterDate').value || new Date().toISOString().split('T')[0];
+            const initialDate = isEdit ? '' : (document.getElementById('filterDate').value || new Date().toISOString().split('T')[0]);
             const typeOpts = leaveTypes.map(t => `<option value="${t}" ${t===type?'selected':''}>${t}</option>`).join('');
 
-            let nameHtml = '';
+            let formHtml = '';
             if (!isEdit) {
-                Swal.fire({ title: 'กำลังโหลดรายชื่อ...', didOpen: () => Swal.showLoading() });
-                const absentList = await getAbsentPersonnel(date);
-                Swal.close();
-                if (absentList.length === 0) return Swal.fire('ข้อมูลครบ', 'ทุกคนลงเวลาหรือลาครบแล้ว', 'info');
-                
-                const options = absentList.map(p => `<option value="${p.personnel_id}">${p.name} (${p.personnel_id})</option>`).join('');
-                nameHtml = `<label>เลือกชื่อพนักงาน:</label><select id="l-pid" class="date-input" style="margin-bottom:10px;">${options}</select>`;
+                formHtml = `
+                    <div style="text-align:left;">
+                        <label style="font-weight:bold;">1. เลือกวันที่ลา:</label>
+                        <input type="date" id="l-date" class="date-input" value="${initialDate}" onchange="refreshAbsentDropdown(this.value)" style="margin-bottom:15px; border:2px solid var(--info);">
+                        <label style="font-weight:bold;">2. ชื่อผู้ที่ไม่ได้ลงเวลา/ลา:</label>
+                        <select id="l-pid" class="date-input" style="margin-bottom:5px; border:2px solid var(--primary-color);"></select>
+                        <small id="l-absent-tip" style="display:block; margin-bottom:15px; font-size:0.75rem;"></small>
+                        <label style="font-weight:bold;">3. ประเภทการลา:</label>
+                        <select id="l-type" class="date-input">${typeOpts}</select>
+                    </div>`;
             } else {
-                nameHtml = `<label>ชื่อพนักงาน:</label><input class="date-input" value="${personnelMap[pid] || pid}" readonly style="background:#f3f4f6; margin-bottom:10px;"><input type="hidden" id="l-pid" value="${pid}">`;
+                formHtml = `
+                    <div style="text-align:left;">
+                        <label>ชื่อพนักงาน:</label>
+                        <input class="date-input" value="${personnelMap[pid] || pid}" readonly style="background:#f3f4f6; margin-bottom:15px;">
+                        <input type="hidden" id="l-pid" value="${pid}">
+                        <label>ประเภทการลา:</label>
+                        <select id="l-type" class="date-input">${typeOpts}</select>
+                    </div>`;
             }
 
             const { value: f } = await Swal.fire({
                 title: isEdit ? 'แก้ไขการลา' : 'บันทึกการลา',
-                html: `<div style="text-align:left;">${nameHtml}<label>ประเภทการลา:</label><select id="l-type" class="date-input">${typeOpts}</select></div>`,
+                html: formHtml,
                 showCancelButton: true,
-                preConfirm: () => ({ pid: document.getElementById('l-pid').value, type: document.getElementById('l-type').value })
+                didOpen: () => { if (!isEdit) refreshAbsentDropdown(initialDate); },
+                preConfirm: () => {
+                    const pidVal = document.getElementById('l-pid').value;
+                    if (!pidVal) return Swal.showValidationMessage('กรุณาเลือกพนักงาน');
+                    return { pid: pidVal, type: document.getElementById('l-type').value, date: isEdit ? null : document.getElementById('l-date').value };
+                }
             });
 
             if (f) {
-                const pl = { personnel_id: f.pid, leave_type: f.type, status: 'approved', approved_by: user.name };
-                if (isEdit) await sbClient.from('Leave_records').update(pl).eq('id', id);
-                else { pl.id = Date.now(); pl.leave_date = date; await sbClient.from('Leave_records').insert([pl]); }
-                loadLeaves();
+                try {
+                    const pl = { personnel_id: f.pid, leave_type: f.type, status: 'approved', approved_by: user.name };
+                    if (isEdit) await sbClient.from('Leave_records').update(pl).eq('id', id);
+                    else { pl.id = Date.now(); pl.leave_date = f.date; await sbClient.from('Leave_records').insert([pl]); }
+                    loadLeaves();
+                    Swal.fire('สำเร็จ', 'บันทึกเรียบร้อย', 'success');
+                } catch (err) { Swal.fire('Error', err.message, 'error'); }
             }
         }
 
@@ -393,7 +439,7 @@
         }
 
         // ==========================================
-        // 👥 Personnel Functions
+        // 👥 PERSONNEL (Tab 3)
         // ==========================================
         async function loadPersonnel() {
             const sVal = document.getElementById('personnel-search').value.trim();
@@ -448,7 +494,7 @@
         }
 
         // ==========================================
-        // Utilities & Shared Functions
+        // 🛠️ SHARED UTILITIES
         // ==========================================
         window.handleAddClick = () => {
             if (currentTab === 'att') openAttModal();
@@ -513,7 +559,6 @@
             if (f) { await sbClient.from('TimeStamp').update({ time_in: f.in||null, time_out: f.out||null }).eq('id', id); loadAttendance(); }
         }
 
-        // --- Screenshot / Long Press ---
         function attachLongPress(cid) {
             const cont = document.getElementById(cid);
             cont.querySelectorAll('.data-item').forEach(item => {
