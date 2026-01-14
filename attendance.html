@@ -24,7 +24,7 @@
         /* Header & Main Tabs */
         .card-header { background: white; padding: 15px; border-radius: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 10px; border-bottom: 4px solid var(--primary); }
         .tabs { display: flex; background: #fdf2f8; padding: 5px; border-radius: 15px; margin-bottom: 10px; flex-shrink: 0; }
-        .tab-btn { flex: 1; padding: 12px; border: none; background: transparent; border-radius: 10px; cursor: pointer; font-weight: 700; color: var(--muted); font-size: 0.9rem; transition: 0.3s; }
+        .tab-btn { flex: 1; padding: 10px; border: none; background: transparent; border-radius: 10px; cursor: pointer; font-weight: 700; color: var(--muted); font-size: 0.9rem; transition: 0.3s; }
         .tab-btn.active { background: var(--primary); color: white; }
 
         /* Sub Filter UI */
@@ -33,13 +33,13 @@
         .sub-btn { flex: 1; padding: 8px; border: none; background: transparent; border-radius: 8px; cursor: pointer; font-size: 0.8rem; font-weight: bold; color: var(--muted); }
         .sub-btn.active { background: var(--primary); color: white; }
 
-        /* List Styling - Responsive */
+        /* List Styling */
         .content-scroll { flex: 1; overflow-y: auto; display: flex; flex-direction: column; padding-bottom: 80px; }
         .data-list { display: grid; gap: 8px; align-content: start; }
         .data-item { 
             background: white; padding: 12px; border-radius: 15px; border-left: 5px solid #ccc; 
             display: flex; justify-content: space-between; align-items: center; 
-            box-shadow: 0 2px 4px rgba(0,0,0,0.02); min-height: 80px; 
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02); min-height: 85px; 
         }
         .item-att { border-left-color: var(--primary); }
         .item-leave { border-left-color: #f59e0b; }
@@ -53,7 +53,8 @@
         
         /* Pager UI */
         .pager { display: flex; justify-content: center; align-items: center; gap: 15px; padding: 10px 0; flex-shrink: 0; }
-        .btn-page { width: 35px; height: 35px; border-radius: 10px; border: 1px solid var(--border); background: white; cursor: pointer; }
+        .btn-page { width: 35px; height: 35px; border-radius: 10px; border: 1px solid var(--border); background: white; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .btn-page:disabled { opacity: 0.3; }
         
         .actions { display: flex; gap: 5px; }
         .btn-icon { width: 32px; height: 32px; border-radius: 8px; border: none; background: #f3f4f6; color: var(--muted); cursor: pointer; display: flex; align-items: center; justify-content: center; }
@@ -70,11 +71,6 @@
             transition: 0.3s;
         }
         .fab:hover { transform: scale(1.1); }
-
-        @media (max-width: 480px) {
-            .tab-btn { font-size: 0.8rem; padding: 8px; }
-            .data-item { padding: 10px; }
-        }
     </style>
 </head>
 <body>
@@ -140,7 +136,13 @@
     let totalItems = 0;
     let leaveTypes = [];
 
-    // ตรวจสอบสิทธิ์ระดับ 1-2
+    // ฟังก์ชันช่วยแสดงวันที่แบบไทย วว/ดด/ปปปป (พ.ศ.)
+    function fmtThai(d) {
+        if(!d) return '-';
+        const date = new Date(d);
+        return date.toLocaleDateString('th-TH', {day:'2-digit', month:'2-digit', year:'numeric'});
+    }
+
     const checkAccess = () => {
         userData = JSON.parse(localStorage.getItem('tas_user') || '{}');
         const level = String(userData.level || '');
@@ -180,13 +182,6 @@
         personnelList.forEach(p => personnelMap[p.personnel_id] = p.name);
         const { data: sData } = await sbClient.from('Settings').select('value').eq('key', 'leave_types').single();
         leaveTypes = sData?.value ? sData.value.split(',').map(t => t.trim()) : ['ลาป่วย', 'ลากิจ', 'ลาพักร้อน'];
-    }
-
-    // รูปแบบ ววดดปปปป ไทย
-    function fmtThai(d) {
-        if(!d) return '';
-        const date = new Date(d);
-        return date.toLocaleDateString('th-TH', {day:'2-digit', month:'2-digit', year:'numeric'});
     }
 
     function changeMainTab(t) {
@@ -260,7 +255,7 @@
     async function renderPerson(f, t) {
         const { data, count } = await sbClient.from('Personnel').select('*', {count:'exact'}).order('personnel_id').range(f, t);
         totalItems = count || 0;
-        const canEdit = userData.level == 1; // สิทธิ์ระดับ 2 แก้ไข/ลบไม่ได้
+        const canEdit = userData.level == 1;
         document.getElementById('list-person').innerHTML = data?.map(p => `
             <div class="data-item item-person">
                 <div style="flex:1">
@@ -302,41 +297,52 @@
             };
             const absentList = await getAbsentList(selectedDate);
             const { value: f } = await Swal.fire({
-                title: '<span style="color:#ec4899;">✈️ บันทึกการลา</span>',
-                html: `<div style="text-align:left; padding: 10px;"><div style="margin-bottom:12px;"><label style="font-weight:bold; font-size:0.8rem;">วันที่ลา</label><input type="date" id="sw-date" class="swal2-input" value="${selectedDate}"></div><div style="margin-bottom:12px;"><label style="font-weight:bold; font-size:0.8rem;">พนักงาน (ไม่ลงเวลา/ไม่ลา)</label><select id="sw-pid" class="swal2-input">${absentList.map(p => `<option value="${p.personnel_id}">${p.name}</option>`).join('') || '<option value="">-- ครบแล้ว --</option>'}</select></div><div><label style="font-weight:bold; font-size:0.8rem;">ประเภทการลา</label><select id="sw-type" class="swal2-input">${leaveTypes.map(t => `<option value="${t}">${t}</option>`)}</select></div></div>`,
+                title: '<span style="color:#ec4899; font-weight:bold;">✈️ บันทึกการลาใหม่</span>',
+                html: `<div style="text-align:left; padding: 5px;"><div style="margin-bottom:12px;"><label style="font-weight:bold; font-size:0.8rem; color:#6b7280;">ระบุวันที่ลา</label><input type="date" id="sw-date" class="swal2-input" style="border-radius:12px;" value="${selectedDate}"></div><div style="margin-bottom:12px;"><label style="font-weight:bold; font-size:0.8rem; color:#6b7280;">เลือกพนักงาน (ไม่ลงเวลา/ไม่ลา)</label><select id="sw-pid" class="swal2-input" style="border-radius:12px;">${absentList.map(p => `<option value="${p.personnel_id}">${p.name}</option>`).join('') || '<option value="">-- ครบถ้วนแล้ว --</option>'}</select></div><div><label style="font-weight:bold; font-size:0.8rem; color:#6b7280;">ประเภทการลา</label><select id="sw-type" class="swal2-input" style="border-radius:12px;">${leaveTypes.map(t => `<option value="${t}">${t}</option>`)}</select></div></div>`,
+                background: '#fef2f8', confirmButtonColor: '#ec4899', showCancelButton: true, reverseButtons: true,
                 didOpen: () => {
                     const dIn = document.getElementById('sw-date'), pSel = document.getElementById('sw-pid');
                     dIn.addEventListener('change', async () => {
                         pSel.innerHTML = '<option>⏳ กำลังโหลด...</option>';
                         const newList = await getAbsentList(dIn.value);
-                        pSel.innerHTML = newList.map(p => `<option value="${p.personnel_id}">${p.name}</option>`).join('') || '<option value="">-- ครบแล้ว --</option>';
+                        pSel.innerHTML = newList.map(p => `<option value="${p.personnel_id}">${p.name}</option>`).join('') || '<option value="">-- ครบถ้วนแล้ว --</option>';
                     });
                 },
-                preConfirm: () => ({ id: Date.now().toString(), personnel_id: document.getElementById('sw-pid').value, leave_date: document.getElementById('sw-date').value, leave_type: document.getElementById('sw-type').value, status: 'approved' })
+                preConfirm: () => {
+                    const pid = document.getElementById('sw-pid').value;
+                    if (!pid) { Swal.showValidationMessage('กรุณาเลือกพนักงาน'); return false; }
+                    return { id: Date.now().toString(), personnel_id: pid, leave_date: document.getElementById('sw-date').value, leave_type: document.getElementById('sw-type').value, status: 'approved' };
+                }
             });
             if (f?.personnel_id) { await sbClient.from('Leave_records').insert([f]); render(); }
         } else if (currentTab === 'att') {
-            let mode = 'in'; //
+            let mode = 'in'; 
             const { value: f } = await Swal.fire({
-                title: '<span style="color:#ec4899;">🕒 ลงเวลาด้วยมือ</span>',
+                title: '<span style="color:#ec4899; font-weight:bold;">🕒 ลงเวลาด้วยมือ</span>',
                 html: `
                     <div style="text-align:left; padding: 5px;">
-                        <div style="margin-bottom:12px;">
-                            <label style="font-weight:bold; font-size:0.8rem;">ค้นหาชื่อพนักงาน</label>
-                            <input id="sw-search" placeholder="พิมพ์ชื่อเพื่อค้นหา..." class="swal2-input" style="margin:0; width:100%;">
-                            <select id="sw-pid" class="swal2-input" size="4" style="height:auto; margin-top:5px;"></select>
-                        </div>
-                        <div style="margin-bottom:12px;">
-                            <label style="font-weight:bold; font-size:0.8rem;">วันที่ทำงาน</label>
-                            <input id="sw-date" type="date" class="swal2-input" style="margin:0; width:100%;" value="${new Date().toISOString().split('T')[0]}">
+                        <div style="margin-bottom:15px;">
+                            <label style="font-weight:bold; font-size:0.85rem; color:#6b7280; display:block; margin-bottom:5px;">ค้นหาชื่อพนักงาน</label>
+                            <div style="position:relative; margin-bottom:8px;">
+                                <i class="fas fa-search" style="position:absolute; left:12px; top:13px; color:#d1d5db;"></i>
+                                <input id="sw-search" placeholder="พิมพ์ชื่อเพื่อค้นหา..." class="swal2-input" 
+                                    style="margin:0; width:100%; padding-left:35px; border-radius:12px; font-size:0.95rem; border:1px solid #e5e7eb;">
+                            </div>
+                            <div style="border:1px solid #fbcfe8; border-radius:12px; overflow:hidden; background:#fff;">
+                                <select id="sw-pid" size="5" style="width:100%; border:none; outline:none; font-family:'Sarabun'; font-size:0.95rem; padding:5px; cursor:pointer;"></select>
+                            </div>
                         </div>
                         <div style="margin-bottom:15px;">
-                            <label style="font-weight:bold; font-size:0.8rem;">ระบุเวลา</label>
-                            <input id="sw-time" type="time" class="swal2-input" style="margin:0; width:100%;" value="${new Date().toTimeString().slice(0,5)}">
+                            <label style="font-weight:bold; font-size:0.85rem; color:#6b7280; display:block; margin-bottom:5px;">วันที่ทำงาน (วว/ดด/ปปปป)</label>
+                            <input id="sw-date" type="date" class="swal2-input" style="margin:0; width:100%; border-radius:12px; font-family:'Sarabun';" value="${new Date().toISOString().split('T')[0]}">
+                        </div>
+                        <div style="margin-bottom:20px;">
+                            <label style="font-weight:bold; font-size:0.85rem; color:#6b7280; display:block; margin-bottom:5px;">ระบุเวลา</label>
+                            <input id="sw-time" type="time" class="swal2-input" style="margin:0; width:100%; border-radius:12px; text-align:center; font-size:1.2rem; font-weight:bold;" value="${new Date().toTimeString().slice(0,5)}">
                         </div>
                         <div style="display:flex; gap:10px;">
-                            <button id="btn-in" style="flex:1; padding:12px; border-radius:12px; border:2px solid #10b981; background:#f0fdf4; color:#10b981; font-weight:bold; cursor:pointer;" onclick="window.setMode('in')">เวลาเข้า</button>
-                            <button id="btn-out" style="flex:1; padding:12px; border-radius:12px; border:2px solid #e5e7eb; background:white; color:#9ca3af; font-weight:bold; cursor:pointer;" onclick="window.setMode('out')">เวลาออก</button>
+                            <button id="btn-in" style="flex:1; padding:14px; border-radius:12px; border:2px solid #10b981; background:#f0fdf4; color:#10b981; font-weight:bold; cursor:pointer;" onclick="window.setMode('in')">บันทึกเข้า</button>
+                            <button id="btn-out" style="flex:1; padding:14px; border-radius:12px; border:2px solid #e5e7eb; background:white; color:#9ca3af; font-weight:bold; cursor:pointer;" onclick="window.setMode('out')">บันทึกออก</button>
                         </div>
                     </div>
                 `,
@@ -344,31 +350,36 @@
                     const search = document.getElementById('sw-search'), select = document.getElementById('sw-pid');
                     const update = (term = "") => {
                         const filtered = personnelList.filter(p => p.name.includes(term));
-                        select.innerHTML = filtered.map(p => `<option value="${p.personnel_id}">${p.name}</option>`).join('');
+                        select.innerHTML = filtered.map(p => `<option value="${p.personnel_id}" style="padding:10px; border-bottom:1px solid #fdf2f8;">${p.name}</option>`).join('');
                         if(filtered.length) select.selectedIndex = 0;
                     };
                     search.addEventListener('input', (e) => update(e.target.value)); update();
                     window.setMode = (m) => {
                         mode = m;
-                        document.getElementById('btn-in').style.background = m==='in'?'#f0fdf4':'white';
-                        document.getElementById('btn-in').style.borderColor = m==='in'?'#10b981':'#e5e7eb';
-                        document.getElementById('btn-in').style.color = m==='in'?'#10b981':'#9ca3af';
-                        document.getElementById('btn-out').style.background = m==='out'?'#fef2f2':'white';
-                        document.getElementById('btn-out').style.borderColor = m==='out'?'#ef4444':'#e5e7eb';
-                        document.getElementById('btn-out').style.color = m==='out'?'#ef4444':'#9ca3af';
+                        const bin = document.getElementById('btn-in'), bout = document.getElementById('btn-out');
+                        if(m === 'in'){
+                            bin.style.background='#f0fdf4'; bin.style.borderColor='#10b981'; bin.style.color='#10b981';
+                            bout.style.background='white'; bout.style.borderColor='#e5e7eb'; bout.style.color='#9ca3af';
+                        } else {
+                            bout.style.background='#fef2f2'; bout.style.borderColor='#ef4444'; bout.style.color='#ef4444';
+                            bin.style.background='white'; bin.style.borderColor='#e5e7eb'; bin.style.color='#9ca3af';
+                        }
                     };
                 },
                 preConfirm: () => {
                     const pid = document.getElementById('sw-pid').value;
                     const date = document.getElementById('sw-date').value;
                     const time = document.getElementById('sw-time').value;
-                    if(!pid) return Swal.showValidationMessage('กรุณาเลือกพนักงาน');
+                    if(!pid) return Swal.showValidationMessage('กรุณาเลือกชื่อพนักงาน');
                     const res = { id:`${date.replace(/-/g,'')}${pid}`, personnel_id:pid, full_name:personnelMap[pid], work_date:date, verified:0 };
                     res[mode === 'in' ? 'time_in' : 'time_out'] = time + ":00";
                     return res;
                 }
             });
-            if (f) { await sbClient.from('TimeStamp').upsert([f], { onConflict: 'personnel_id, work_date' }); render(); }
+            if (f) { 
+                await sbClient.from('TimeStamp').upsert([f], { onConflict: 'personnel_id, work_date' });
+                render(); 
+            }
         }
     }
 </script>
