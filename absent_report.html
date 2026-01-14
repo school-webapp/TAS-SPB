@@ -17,18 +17,26 @@
         body { font-family: 'Sarabun', sans-serif; background: var(--bg); color: var(--text); padding: 10px; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
         .container { max-width: 800px; margin: 0 auto; width: 100%; flex: 1; display: flex; flex-direction: column; }
         
-        .card-header { background: white; padding: 15px; border-radius: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 10px; border-bottom: 4px solid var(--primary); }
+        .card-header { background: white; padding: 15px; border-radius: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 10px; border-bottom: 4px solid var(--primary); flex-shrink: 0; }
         
-        .content-scroll { flex: 1; overflow-y: auto; padding-bottom: 20px; }
+        /* พื้นที่แสดงรายการ ปรับให้ยืดหยุ่นตามความสูงหน้าจอ */
+        .content-area { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
         .data-list { display: grid; gap: 8px; align-content: start; }
         .data-item { 
-            background: white; padding: 15px; border-radius: 15px;
+            background: white; padding: 12px 15px; border-radius: 15px;
             display: flex; justify-content: space-between; align-items: center;
             border-left: 5px solid var(--danger); box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+            height: 85px; /* กำหนดความสูงคงที่เพื่อคำนวณหน้า */
         }
         
         .status-badge { background: #fee2e2; color: var(--danger); padding: 5px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: bold; }
         .loading-box { text-align: center; padding: 50px 20px; color: var(--muted); }
+
+        /* ส่วนควบคุมหน้า (Pager) */
+        .pager { display: flex; justify-content: center; align-items: center; gap: 20px; padding: 15px 0; flex-shrink: 0; }
+        .btn-page { width: 40px; height: 40px; border-radius: 12px; border: 1px solid var(--border); background: white; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .btn-page:disabled { opacity: 0.3; cursor: not-allowed; }
+        #pageInfo { font-weight: bold; font-size: 0.9rem; color: var(--muted); }
     </style>
 </head>
 <body>
@@ -46,71 +54,57 @@
 
     <div id="loading" class="loading-box">
         <i class="fas fa-spinner fa-spin fa-2x"></i><br><br>
-        <span>กำลังตรวจสอบข้อมูลปัจจุบัน (เวลาประเทศไทย)...</span>
+        <span>กำลังคำนวณข้อมูลตามขนาดหน้าจอ...</span>
     </div>
 
-    <div class="content-scroll" id="main-list" style="display:none;">
+    <div class="content-area" id="main-area" style="display:none;">
         <div id="absent-list" class="data-list"></div>
+    </div>
+
+    <div class="pager" id="pager-ui" style="display:none;">
+        <button class="btn-page" id="prevBtn" onclick="changePage(-1)"><i class="fas fa-chevron-left"></i></button>
+        <span id="pageInfo">หน้า 1 / 1</span>
+        <button class="btn-page" id="nextBtn" onclick="changePage(1)"><i class="fas fa-chevron-right"></i></button>
     </div>
 </div>
 
 <script>
-    // ตั้งค่าเขตเวลาประเทศไทย (GMT+7) เพื่อป้องกันการแสดงผลวันที่ผิดพลาด
     const now = new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Bangkok"}));
+    const todayDB = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+    
+    let allAbsentees = []; // เก็บรายชื่อทั้งหมดที่กรองแล้ว
+    let currentPage = 1;
 
-    // รูปแบบ YYYY-MM-DD สำหรับ Query ฐานข้อมูล
-    const todayDB = now.getFullYear() + '-' + 
-                    String(now.getMonth() + 1).padStart(2, '0') + '-' + 
-                    String(now.getDate()).padStart(2, '0');
+    document.getElementById('display-date').innerText = now.toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
-    // แสดงวันที่ไทย วว/ดด/ปปปป บนหน้าจอ
-    document.getElementById('display-date').innerText = now.toLocaleDateString('th-TH', {
-        day: '2-digit', month: '2-digit', year: 'numeric'
-    });
+    // คำนวณจำนวนรายการต่อหน้าตามความสูงหน้าจอ
+    function getPageSize() {
+        const availableHeight = document.getElementById('main-area').clientHeight;
+        const itemHeight = 93; // 85px (height) + 8px (gap)
+        return Math.floor(availableHeight / itemHeight) || 5;
+    }
 
     document.addEventListener('DOMContentLoaded', async () => {
-        const stored = localStorage.getItem('tas_user');
-        if (!stored) { window.location.replace('login.html'); return; }
-        
-        const user = JSON.parse(stored);
-        // ตรวจสอบสิทธิ์เฉพาะแอดมินระดับ 1 และ 2
-        if (user.level != '1' && user.level != '2') { 
-            window.location.replace('menu.html'); 
-            return; 
-        }
-        fetchAbsentData();
+        const user = JSON.parse(localStorage.getItem('tas_user') || '{}');
+        if (user.level != '1' && user.level != '2') { window.location.replace('menu.html'); return; }
+        await fetchAbsentData();
+        window.addEventListener('resize', render); // ปรับการแสดงผลเมื่อหมุนหน้าจอหรือเปลี่ยนขนาด window
     });
 
     async function fetchAbsentData() {
         try {
-            // 1. ดึงรายชื่อพนักงานทั้งหมดจากระบบ
             const { data: allP } = await sbClient.from('Personnel').select('personnel_id, name').order('name');
-
-            // 2. ดึงรหัสพนักงานที่ลงเวลาในฐานข้อมูลวันนี้แล้ว
             const { data: dbAttended } = await sbClient.from('TimeStamp').select('personnel_id').eq('work_date', todayDB);
-
-            // 3. ดึงข้อมูลสดจากเครื่องสแกนตาม URL ที่กำหนด
+            
             let webAttendedIds = [];
             const { data: config } = await sbClient.from('Settings').select('value').eq('key', 'data_url').single();
-            
             if (config?.value) {
                 let base = config.value.trim();
-                
-                // ตรวจสอบและเติมเครื่องหมาย "/" ก่อนต่อด้วยวันที่
                 if (!base.endsWith('/')) base += '/';
-
-                // สร้างรูปแบบวันที่ DDMMYYYY (ค.ศ.) ท้าย URL
-                const day = String(now.getDate()).padStart(2, '0');
-                const month = String(now.getMonth() + 1).padStart(2, '0');
-                const year = now.getFullYear();
-                const dateStr = `${day}${month}${year}`; 
-
-                // รูปแบบ URL สมบูรณ์: data_url/DDMMYYYY/
-                const finalTargetUrl = base + dateStr + '/';
-                const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(finalTargetUrl)}`;
-
+                const datePath = String(now.getDate()).padStart(2, '0') + String(now.getMonth() + 1).padStart(2, '0') + now.getFullYear() + '/';
+                const finalUrl = `https://corsproxy.io/?${encodeURIComponent(base + datePath)}`;
                 try {
-                    const res = await fetch(proxyUrl);
+                    const res = await fetch(finalUrl);
                     if (res.ok) {
                         const html = await res.text();
                         const doc = new DOMParser().parseFromString(html, "text/html");
@@ -120,42 +114,56 @@
                             if (pid && !isNaN(pid)) webAttendedIds.push(pid);
                         });
                     }
-                } catch (e) { console.warn("Fetch failed, comparing with DB only."); }
+                } catch (e) { console.warn("Fetch failed"); }
             }
 
-            // 4. กรองหาผู้ที่ไม่มีข้อมูลทั้งใน DB และ หน้าเว็บเครื่องสแกน
-            const busyIds = new Set([
-                ...(dbAttended || []).map(r => r.personnel_id),
-                ...webAttendedIds
-            ]);
-
-            const absentees = (allP || []).filter(p => !busyIds.has(p.personnel_id));
-
-            render(absentees);
-        } catch (err) {
-            Swal.fire('Error', 'ระบบไม่สามารถเข้าถึงข้อมูลได้ในขณะนี้', 'error');
-        }
+            const busyIds = new Set([...(dbAttended || []).map(r => r.personnel_id), ...webAttendedIds]);
+            allAbsentees = (allP || []).filter(p => !busyIds.has(p.personnel_id));
+            
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('main-area').style.display = 'flex';
+            document.getElementById('pager-ui').style.display = 'flex';
+            render();
+        } catch (err) { Swal.fire('Error', 'โหลดข้อมูลไม่สำเร็จ', 'error'); }
     }
 
-    function render(list) {
-        document.getElementById('loading').style.display = 'none';
-        document.getElementById('main-list').style.display = 'block';
-        const container = document.getElementById('absent-list');
+    function render() {
+        const pageSize = getPageSize();
+        const totalPages = Math.ceil(allAbsentees.length / pageSize) || 1;
+        
+        // ตรวจสอบขอบเขตหน้าปัจจุบัน
+        if (currentPage > totalPages) currentPage = totalPages;
+        if (currentPage < 1) currentPage = 1;
 
-        if (list.length === 0) {
-            container.innerHTML = '<center style="padding:50px; color:#9ca3af;">-- พนักงานทุกคนลงเวลาเรียบร้อยแล้ว --</center>';
+        const start = (currentPage - 1) * pageSize;
+        const pagedData = allAbsentees.slice(start, start + pageSize);
+
+        const container = document.getElementById('absent-list');
+        if (allAbsentees.length === 0) {
+            container.innerHTML = '<center style="padding:50px; color:#9ca3af;">ทุกคนลงเวลาครบแล้ว</center>';
+            document.getElementById('pager-ui').style.display = 'none';
             return;
         }
 
-        container.innerHTML = list.map(p => `
+        container.innerHTML = pagedData.map(p => `
             <div class="data-item">
                 <div>
                     <strong style="font-size:1rem;">${p.name}</strong><br>
                     <small style="color:var(--muted);">ID: ${p.personnel_id}</small>
                 </div>
-                <span class="status-badge">ยังไม่มีข้อมูลวันนี้</span>
+                <span class="status-badge">ไม่มีข้อมูลวันนี้</span>
             </div>
         `).join('');
+
+        // อัปเดต UI ส่วนจัดการหน้า
+        document.getElementById('pageInfo').innerText = `หน้า ${currentPage} / ${totalPages}`;
+        document.getElementById('prevBtn').disabled = currentPage === 1;
+        document.getElementById('nextBtn').disabled = currentPage >= totalPages;
+    }
+
+    function changePage(step) {
+        currentPage += step;
+        render();
     }
 </script>
 </body>
