@@ -11,7 +11,6 @@
     <script src="sweetalert2.js"></script>
     <script src="config.js"></script>
 
-    
     <style>
         :root {
             --primary: #ec4899; --bg: #f3f4f6; --text: #1f2937;
@@ -49,7 +48,6 @@
         
         .date-input { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 10px; font-family: 'Sarabun'; margin-bottom: 10px; }
         
-        /* Pagination */
         .pager { display: flex; justify-content: center; align-items: center; gap: 20px; padding: 15px 0; flex-shrink: 0; }
         .btn-page { width: 40px; height: 40px; border-radius: 12px; border: 1px solid var(--border); background: white; cursor: pointer; }
         .btn-page:disabled { opacity: 0.3; }
@@ -61,10 +59,9 @@
 </head>
 <body>
 
-<div class="container">
-    <div class="card-header">
+<div class="container" id="app-container" style="display: none;"> <div class="card-header">
         <div style="display:flex; justify-content:space-between; align-items:center;">
-            <h2 style="font-size:1.1rem;"><i class="fas fa-user-cog"></i> จัดการระบบ TAS-SPB</h2>
+            <h2 style="font-size:1.1rem;"><i class="fas fa-user-cog"></i> ระบบจัดการ TAS-SPB</h2>
             <a href="menu.html" style="color:var(--primary);"><i class="fas fa-home fa-lg"></i></a>
         </div>
     </div>
@@ -90,7 +87,7 @@
         <div id="section-leave" class="content-section" style="display:none;">
             <div class="sub-filter-area">
                 <div class="sub-tabs">
-                    <button class="sub-btn active" id="leave-sub-all" onclick="setLeaveSub('all')">ทั้งหมด</button>
+                    <button class="sub-btn active" id="leave-sub-all" onclick="setLeaveSub('all')">ประวัติทั้งหมด</button>
                     <button class="sub-btn" id="leave-sub-date" onclick="setLeaveSub('date')">ตามวันที่</button>
                 </div>
                 <div id="leave-date-input-area" style="display:none; margin-top:10px;">
@@ -112,9 +109,36 @@
     </div>
 </div>
 
-<button class="fab" onclick="handleAdd()"><i class="fas fa-plus"></i></button>
+<button class="fab" id="fab-add" style="display: none;" onclick="handleAdd()"><i class="fas fa-plus"></i></button>
 
 <script>
+    // ==========================================
+    // ตรวจสอบสิทธิ์ (Access Control Level 1 Only)
+    // ==========================================
+    const checkAccess = () => {
+        const userData = JSON.parse(localStorage.getItem('tas_user') || '{}');
+        const userLevel = String(userData.level || '');
+
+        if (userLevel !== '1') {
+            Swal.fire({
+                icon: 'error',
+                title: 'ปฏิเสธการเข้าถึง',
+                text: 'เฉพาะผู้ดูแลระบบระดับสูง (Level 1) เท่านั้นที่สามารถเข้าหน้าจัดการนี้ได้',
+                confirmButtonText: 'กลับหน้าเมนู',
+                allowOutsideClick: false
+            }).then(() => {
+                window.location.replace('menu.html');
+            });
+            return false;
+        }
+        
+        // ถ้าเป็น Level 1 ให้แสดงเนื้อหา
+        document.getElementById('app-container').style.display = 'flex';
+        document.getElementById('fab-add').style.display = 'flex';
+        return true;
+    };
+
+    // ตัวแปรระบบ
     let currentTab = 'att';
     let filters = { att: 'comp', leave: 'all' };
     let pages = { att: 1, leave: 1, person: 1 };
@@ -128,6 +152,8 @@
     }
 
     document.addEventListener('DOMContentLoaded', async () => {
+        if (!checkAccess()) return; // ตรวจสอบสิทธิ์ก่อนทำงานอย่างอื่น
+
         const today = new Date().toISOString().split('T')[0];
         document.getElementById('attDate').value = today;
         document.getElementById('leaveDate').value = today;
@@ -138,6 +164,7 @@
 
     async function loadPersonnel() {
         const { data } = await sbClient.from('Personnel').select('personnel_id, name');
+        personnelMap = {};
         data?.forEach(p => personnelMap[p.personnel_id] = p.name);
     }
 
