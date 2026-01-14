@@ -1,78 +1,356 @@
 <!DOCTYPE html>
 <html lang="th">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>เมนูหลัก - TAS-SPB</title>
-    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        :root { --primary: #ec4899; --bg: #f3f4f6; --text: #1f2937; }
-        body { font-family: 'Sarabun', sans-serif; background: var(--bg); color: var(--text); padding: 15px; }
-        .container { max-width: 500px; margin: 0 auto; }
-        .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .profile-card { background: linear-gradient(135deg, #ec4899 0%, #be185d 100%); padding: 20px; border-radius: 24px; color: white; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 10px 20px rgba(236,72,153,0.3); }
-        .grid-menu { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-        .menu-card { background: white; padding: 20px; border-radius: 20px; text-decoration: none; color: var(--text); display: flex; flex-direction: column; align-items: center; gap: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-        .icon-box { width: 50px; height: 50px; border-radius: 15px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; color: white; }
-        .c-absent { background: #ef4444; } .c-att { background: #ec4899; } .c-perm { background: #6366f1; } .c-proc { background: #8b5cf6; }
-        .wide { grid-column: span 2; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="top-bar">
-            <h2 style="color:var(--primary)">TAS-SPB System</h2>
-            <i class="fas fa-user-lock fa-lg" id="btn-manage-access" style="display:none; cursor:pointer;" onclick="location.href='manage_access.html'"></i>
+
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+        <title>เมนูหลัก - TAS-SPB</title>
+
+        <link rel="icon" type="image/png" href="favicon.png">
+        <link rel="apple-touch-icon" href="favicon.png">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-status-bar-style" content="default">
+
+        <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap"
+            rel="stylesheet">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+        <script src="sweetalert2.js"></script>
+        <script src="supabase.js"></script>
+        <script src="config.js"></script>
+
+        <style>
+            :root {
+                --primary: #ec4899; /* เปลี่ยนเป็นชมพูตามธีม attendance */
+                --bg: #f8fafc;
+                --white: #ffffff;
+                --text: #1e293b;
+                --muted: #64748b;
+                --danger: #ef4444;
+                --indigo: #6366f1;
+            }
+
+            * {
+                box-sizing: border-box;
+                margin: 0;
+                padding: 0;
+            }
+
+            body {
+                font-family: 'Sarabun', sans-serif;
+                background-color: var(--bg);
+                color: var(--text);
+                padding: 15px;
+            }
+
+            .container {
+                max-width: 500px;
+                margin: 0 auto;
+            }
+
+            .top-bar {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                padding: 10px 5px;
+                margin-bottom: 20px;
+            }
+
+            .brand-box {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            }
+
+            .sys-icon {
+                width: 32px;
+                height: 32px;
+                object-fit: contain;
+            }
+
+            .system-logo {
+                font-weight: 800;
+                font-size: 1.25rem;
+                color: var(--primary);
+                letter-spacing: -0.5px;
+            }
+
+            .profile-menu-card {
+                background: linear-gradient(135deg, #ec4899 0%, #be185d 100%);
+                padding: 22px;
+                border-radius: 24px;
+                color: white;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 15px;
+                margin-bottom: 20px;
+                box-shadow: 0 10px 20px -5px rgba(236, 72, 153, 0.4);
+            }
+
+            .profile-link {
+                flex: 1;
+                display: flex;
+                align-items: center;
+                gap: 15px;
+                text-decoration: none;
+                color: white;
+                overflow: hidden;
+            }
+
+            .avatar-box {
+                width: 55px;
+                height: 55px;
+                background: rgba(255, 255, 255, 0.2);
+                border-radius: 16px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 1.8rem;
+                flex-shrink: 0;
+            }
+
+            .profile-info {
+                overflow: hidden;
+            }
+
+            .profile-info h2 {
+                font-size: 1.15rem;
+                font-weight: 700;
+                margin-bottom: 2px;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+
+            .profile-info p {
+                font-size: 0.8rem;
+                opacity: 0.85;
+            }
+
+            .btn-logout-inline {
+                background: rgba(255, 255, 255, 0.2);
+                border: 1px solid rgba(255, 255, 255, 0.3);
+                color: white;
+                width: 42px;
+                height: 42px;
+                border-radius: 12px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                cursor: pointer;
+                transition: 0.2s;
+            }
+
+            .admin-section-title {
+                font-size: 0.85rem;
+                font-weight: 700;
+                color: var(--muted);
+                margin: 25px 5px 12px;
+                text-transform: uppercase;
+            }
+
+            .grid-menu {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 12px;
+            }
+
+            .menu-card {
+                background: var(--white);
+                border-radius: 22px;
+                padding: 20px 10px;
+                text-align: center;
+                text-decoration: none;
+                color: var(--text);
+                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 10px;
+                transition: 0.2s;
+            }
+
+            .menu-card:active {
+                transform: scale(0.95);
+            }
+
+            .icon-box {
+                width: 48px;
+                height: 48px;
+                border-radius: 15px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 1.4rem;
+                color: white;
+            }
+
+            .menu-title {
+                font-size: 0.85rem;
+                font-weight: 700;
+            }
+
+            .c-process { background: #8b5cf6; }
+            .c-report { background: #10b981; }
+            .c-setting { background: #f59e0b; }
+            .c-att { background: #ec4899; }
+            .c-absent { background: var(--danger); }
+            
+            .wide-card {
+                grid-column: span 2;
+                flex-direction: row;
+                justify-content: flex-start;
+                padding-left: 20px;
+            }
+
+            .btn-manage-perm {
+                color: var(--muted);
+                cursor: pointer;
+                transition: 0.2s;
+            }
+
+            .btn-manage-perm:hover {
+                color: var(--primary);
+            }
+        </style>
+    </head>
+
+    <body>
+        <div class="container">
+            <div class="top-bar">
+                <div class="brand-box">
+                    <img src="favicon.png" alt="Icon" class="sys-icon">
+                    <div class="system-logo">TAS-SPB <span
+                            style="font-weight:300; font-size: 1.1rem; opacity: 0.7;">System</span></div>
+                </div>
+                <i class="fas fa-user-lock fa-lg btn-manage-perm" id="btn-manage-access" style="display:none;" onclick="location.href='manage_access.html'"></i>
+            </div>
+
+            <div class="profile-menu-card">
+                <a href="profile.html" class="profile-link">
+                    <div class="avatar-box">👤</div>
+                    <div class="profile-info">
+                        <h2 id="userName">กำลังโหลด...</h2>
+                        <p id="userStatus">รหัสพนักงาน: -</p>
+                    </div>
+                </a>
+                <button class="btn-logout-inline" onclick="logout()">
+                    <i class="fas fa-sign-out-alt"></i>
+                </button>
+            </div>
+
+            <div id="admin-area" style="display: none;">
+                <div class="admin-section-title">เครื่องมือดูแลระบบ</div>
+                <div class="grid-menu">
+                    
+                    <a href="absent_report.html" class="menu-card wide-card" id="menu-absent" style="display: none;">
+                        <div class="icon-box c-absent"><i class="fas fa-user-slash"></i></div>
+                        <div class="menu-title">ผู้ไม่มีข้อมูลการลงเวลา</div>
+                    </a>
+
+                    <a href="process.html" class="menu-card" id="menu-process">
+                        <div class="icon-box c-process"><i class="fas fa-sync-alt"></i></div>
+                        <div class="menu-title">ประมวลผลข้อมูล</div>
+                    </a>
+
+                    <a href="attendance.html" class="menu-card" id="menu-attendance">
+                        <div class="icon-box c-att"><i class="fas fa-calendar-check"></i></div>
+                        <div class="menu-title" id="att-label">จัดการเวลา/ลา/บุคลากร</div>
+                    </a>
+
+                    <a href="report.html" class="menu-card" id="menu-report">
+                        <div class="icon-box c-report"><i class="fas fa-file-export"></i></div>
+                        <div class="menu-title">สรุปรายงาน</div>
+                    </a>
+
+                    <a href="settings.html" class="menu-card" id="menu-settings">
+                        <div class="icon-box c-setting"><i class="fas fa-tools"></i></div>
+                        <div class="menu-title">ตั้งค่าระบบ</div>
+                    </a>
+                </div>
+            </div>
+
+            <div id="vText" style="text-align:center; margin-top:40px; font-size:0.75rem; color:var(--muted);">
+                TAS-SPB System
+            </div>
         </div>
 
-        <div class="profile-card">
-            <div><h3 id="userName">กำลังโหลด...</h3><p id="userStatus">รหัสพนักงาน: -</p></div>
-            <i class="fas fa-sign-out-alt fa-lg" onclick="logout()" style="cursor:pointer"></i>
-        </div>
+        <script>
+            async function initMenu() {
+                const stored = localStorage.getItem('tas_user');
+                if (!stored) { window.location.href = 'login.html'; return; }
 
-        <div class="grid-menu" id="admin-area" style="display:none;">
-            <a href="absent_report.html" class="menu-card wide" id="menu-absent" style="display:none;">
-                <div class="icon-box c-absent"><i class="fas fa-user-slash"></i></div>
-                <strong>ผู้ไม่มีข้อมูลการลงเวลา</strong>
-            </a>
-            <a href="attendance.html" class="menu-card">
-                <div class="icon-box c-att"><i class="fas fa-calendar-check"></i></div>
-                <strong id="attTitle">จัดการเวลา/ลา</strong>
-            </a>
-            <a href="process.html" class="menu-card">
-                <div class="icon-box c-proc"><i class="fas fa-sync-alt"></i></div>
-                <strong>ประมวลผลข้อมูล</strong>
-            </a>
-        </div>
-    </div>
+                const user = JSON.parse(stored);
+                const level = String(user.level);
+                
+                // ตั้งค่าโปรไฟล์
+                let roleText = 'User';
+                if (level === '1') roleText = 'Super Admin';
+                else if (level === '2') roleText = 'Admin';
 
-    <script src="supabase.js"></script>
-    <script src="config.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', async () => {
-            const user = JSON.parse(localStorage.getItem('tas_user'));
-            if (!user) { location.href = 'login.html'; return; }
+                document.getElementById('userName').innerText = user.name;
+                document.getElementById('userStatus').innerHTML = `ID: ${user.personnel_id} &nbsp;|&nbsp; ${roleText}`;
 
-            document.getElementById('userName').innerText = user.name;
-            document.getElementById('userStatus').innerText = `ID: ${user.personnel_id} | Level: ${user.level}`;
+                const adminArea = document.getElementById('admin-area');
+                const btnManageAccess = document.getElementById('btn-manage-access');
+                const menuAbsent = document.getElementById('menu-absent');
+                const menuSettings = document.getElementById('menu-settings');
+                const attLabel = document.getElementById('att-label');
 
-            const level = String(user.level);
-            if (level === '1' || level === '2') {
-                document.getElementById('admin-area').style.display = 'grid';
+                // --- ตรวจสอบสิทธิ์ระดับ 1 (Super Admin) ---
                 if (level === '1') {
-                    document.getElementById('btn-manage-access').style.display = 'block';
-                    document.getElementById('menu-absent').style.display = 'flex';
-                } else {
-                    // ตรวจสอบสิทธิ์รายบุคคลสำหรับ Level 2
-                    const { data } = await sbClient.from('PagePermissions').select('*').eq('page_name', 'absent_report.html').eq('user_id', user.personnel_id).single();
-                    if (data) document.getElementById('menu-absent').style.display = 'flex';
-                    document.getElementById('attTitle').innerText = 'จัดการการลา/บุคลากร';
+                    adminArea.style.display = 'block';
+                    btnManageAccess.style.display = 'block'; // แสดงไอคอนรูปกุญแจ
+                    menuAbsent.style.display = 'flex';
+                    if(attLabel) attLabel.innerText = "จัดการเวลา/ลา/บุคลากร";
+                } 
+                // --- ตรวจสอบสิทธิ์ระดับ 2 (Admin) ---
+                else if (level === '2') {
+                    adminArea.style.display = 'block';
+                    if (menuSettings) menuSettings.style.display = 'none';
+                    if (attLabel) attLabel.innerText = "จัดการการลา/บุคลากร";
+
+                    // ตรวจสอบสิทธิ์รายบุคคลสำหรับหน้า absent_report.html
+                    try {
+                        const { data: perm } = await sbClient
+                            .from('PagePermissions')
+                            .select('*')
+                            .eq('page_name', 'absent_report.html')
+                            .eq('user_id', user.personnel_id)
+                            .single();
+                        
+                        if (perm) menuAbsent.style.display = 'flex';
+                    } catch (e) { console.error("Permission check failed", e); }
+                }
+
+                // แสดง Version/Credit
+                if (typeof TAS_CONFIG !== 'undefined' && TAS_CONFIG.REPORT_CREDIT) {
+                    document.getElementById('vText').innerText = TAS_CONFIG.REPORT_CREDIT;
                 }
             }
-        });
 
-        function logout() { localStorage.removeItem('tas_user'); location.href = 'login.html'; }
-    </script>
-</body>
+            function logout() {
+                Swal.fire({
+                    title: 'ออกจากระบบ?',
+                    text: "ต้องการปิดเซสชันการทำงานปัจจุบันหรือไม่",
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#ec4899',
+                    cancelButtonColor: '#94a3b8',
+                    confirmButtonText: 'ยืนยัน',
+                    cancelButtonText: 'ยกเลิก',
+                    reverseButtons: true
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        localStorage.removeItem('tas_user');
+                        localStorage.removeItem('tas_remember');
+                        window.location.href = 'login.html';
+                    }
+                });
+            }
+
+            initMenu();
+        </script>
+    </body>
 </html>
