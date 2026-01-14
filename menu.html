@@ -21,13 +21,15 @@
 
         <style>
             :root {
-                --primary: #ec4899; /* เปลี่ยนเป็นชมพูตามธีม attendance */
+                --primary: #ec4899; 
                 --bg: #f8fafc;
                 --white: #ffffff;
                 --text: #1e293b;
                 --muted: #64748b;
                 --danger: #ef4444;
-                --indigo: #6366f1;
+                --blue-app: #0047AB; /* สีน้ำเงินสำหรับชื่อแอป */
+                --sky-app: #00BFFF;  /* สีฟ้าสำหรับคำว่า System */
+                --blue-card: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%); /* พื้นหลังการ์ดน้ำเงิน */
             }
 
             * {
@@ -71,12 +73,12 @@
             .system-logo {
                 font-weight: 800;
                 font-size: 1.25rem;
-                color: var(--primary);
+                color: var(--blue-app); /* เปลี่ยนเป็นสีน้ำเงิน */
                 letter-spacing: -0.5px;
             }
 
             .profile-menu-card {
-                background: linear-gradient(135deg, #ec4899 0%, #be185d 100%);
+                background: var(--blue-card); /* เปลี่ยนพื้นหลังการ์ดเป็นสีน้ำเงิน */
                 padding: 22px;
                 border-radius: 24px;
                 color: white;
@@ -85,7 +87,7 @@
                 justify-content: space-between;
                 gap: 15px;
                 margin-bottom: 20px;
-                box-shadow: 0 10px 20px -5px rgba(236, 72, 153, 0.4);
+                box-shadow: 0 10px 20px -5px rgba(30, 64, 175, 0.4);
             }
 
             .profile-link {
@@ -211,7 +213,7 @@
             }
 
             .btn-manage-perm:hover {
-                color: var(--primary);
+                color: var(--blue-app);
             }
         </style>
     </head>
@@ -222,7 +224,7 @@
                 <div class="brand-box">
                     <img src="favicon.png" alt="Icon" class="sys-icon">
                     <div class="system-logo">TAS-SPB <span
-                            style="font-weight:300; font-size: 1.1rem; opacity: 0.7;">System</span></div>
+                            style="font-weight:300; font-size: 1.1rem; opacity: 1; color: var(--sky-app);">System</span></div>
                 </div>
                 <i class="fas fa-user-lock fa-lg btn-manage-perm" id="btn-manage-access" style="display:none;" onclick="location.href='manage_access.html'"></i>
             </div>
@@ -284,7 +286,6 @@
                 const user = JSON.parse(stored);
                 const level = String(user.level);
                 
-                // ตั้งค่าโปรไฟล์
                 let roleText = 'User';
                 if (level === '1') roleText = 'Super Admin';
                 else if (level === '2') roleText = 'Admin';
@@ -298,20 +299,17 @@
                 const menuSettings = document.getElementById('menu-settings');
                 const attLabel = document.getElementById('att-label');
 
-                // --- ตรวจสอบสิทธิ์ระดับ 1 (Super Admin) ---
                 if (level === '1') {
                     adminArea.style.display = 'block';
-                    btnManageAccess.style.display = 'block'; // แสดงไอคอนรูปกุญแจ
+                    btnManageAccess.style.display = 'block'; 
                     menuAbsent.style.display = 'flex';
                     if(attLabel) attLabel.innerText = "จัดการเวลา/ลา/บุคลากร";
                 } 
-                // --- ตรวจสอบสิทธิ์ระดับ 2 (Admin) ---
                 else if (level === '2') {
                     adminArea.style.display = 'block';
                     if (menuSettings) menuSettings.style.display = 'none';
                     if (attLabel) attLabel.innerText = "จัดการการลา/บุคลากร";
 
-                    // ตรวจสอบสิทธิ์รายบุคคลสำหรับหน้า absent_report.html
                     try {
                         const { data: perm } = await sbClient
                             .from('PagePermissions')
@@ -324,7 +322,6 @@
                     } catch (e) { console.error("Permission check failed", e); }
                 }
 
-                // แสดง Version/Credit
                 if (typeof TAS_CONFIG !== 'undefined' && TAS_CONFIG.REPORT_CREDIT) {
                     document.getElementById('vText').innerText = TAS_CONFIG.REPORT_CREDIT;
                 }
@@ -336,7 +333,7 @@
                     text: "ต้องการปิดเซสชันการทำงานปัจจุบันหรือไม่",
                     icon: 'warning',
                     showCancelButton: true,
-                    confirmButtonColor: '#ec4899',
+                    confirmButtonColor: '#1e40af', /* เปลี่ยนเป็นสีน้ำเงินให้เข้ากับการ์ด */
                     cancelButtonColor: '#94a3b8',
                     confirmButtonText: 'ยืนยัน',
                     cancelButtonText: 'ยกเลิก',
