@@ -22,8 +22,8 @@
 
         .card-header { background: white; padding: 15px; border-radius: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 12px; border-bottom: 4px solid var(--primary); }
         .tabs { display: flex; background: #fdf2f8; padding: 5px; border-radius: 15px; margin-bottom: 15px; flex-shrink: 0; }
-        .tab-btn { flex: 1; padding: 12px; border: none; background: transparent; border-radius: 10px; cursor: pointer; font-weight: 700; color: var(--muted); font-family: 'Sarabun'; }
-        .tab-btn.active { background: var(--primary); color: white; }
+        .tab-btn { flex: 1; padding: 12px; border: none; background: transparent; border-radius: 10px; cursor: pointer; font-weight: 700; color: var(--muted); font-family: 'Sarabun'; transition: 0.3s; }
+        .tab-btn.active { background: var(--primary); color: white; box-shadow: 0 4px 10px rgba(236, 72, 153, 0.2); }
 
         .sub-filter-area { margin-bottom: 12px; flex-shrink: 0; }
         .sub-tabs { display: flex; gap: 8px; background: #fff; padding: 5px; border-radius: 12px; border: 1px solid var(--border); }
@@ -45,7 +45,7 @@
         .bg-green { background: #dcfce7; color: #166534; }
         .bg-red { background: #fee2e2; color: #991b1b; }
         
-        .date-input { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 10px; font-family: 'Sarabun'; margin-bottom: 10px; }
+        .date-input { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 12px; font-family: 'Sarabun'; margin-bottom: 10px; }
         
         .pager { display: flex; justify-content: center; align-items: center; gap: 20px; padding: 15px 0; flex-shrink: 0; }
         .btn-page { width: 40px; height: 40px; border-radius: 12px; border: 1px solid var(--border); background: white; cursor: pointer; }
@@ -53,7 +53,20 @@
         
         .actions { display: flex; gap: 5px; }
         .btn-icon { width: 36px; height: 36px; border-radius: 10px; border: none; background: #f3f4f6; color: var(--muted); cursor: pointer; display: flex; align-items: center; justify-content: center; }
-        .fab { position: fixed; bottom: 85px; right: 20px; width: 60px; height: 60px; background: var(--success); color: white; border-radius: 50%; border: none; font-size: 1.5rem; box-shadow: 0 4px 12px rgba(16,185,129,0.4); z-index: 100; cursor: pointer; }
+        
+        /* ปุ่ม (+) สวยงาม */
+        .fab { 
+            position: fixed; bottom: 30px; right: 25px; 
+            width: 60px; height: 60px; 
+            background: linear-gradient(135deg, #ec4899, #be185d); 
+            color: white; border-radius: 20px; border: none; 
+            font-size: 1.5rem; cursor: pointer; z-index: 1000;
+            box-shadow: 0 10px 20px rgba(236, 72, 153, 0.4);
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            display: flex; align-items: center; justify-content: center;
+        }
+        .fab:hover { transform: scale(1.1) rotate(90deg); box-shadow: 0 15px 25px rgba(236, 72, 153, 0.5); }
+        .fab:active { transform: scale(0.9); }
     </style>
 </head>
 <body>
@@ -66,14 +79,11 @@
         </div>
     </div>
 
-    <div class="tabs">
-        <button id="tab-att-btn" class="tab-btn active" onclick="changeMainTab('att')">🕒 ลงเวลา</button>
-        <button id="tab-leave-btn" class="tab-btn" onclick="changeMainTab('leave')">✈️ การลา</button>
-        <button id="tab-person-btn" class="tab-btn" onclick="changeMainTab('person')">👥 พนักงาน</button>
-    </div>
+    <div class="tabs" id="main-tabs">
+        </div>
 
     <div class="content-scroll" id="main-content">
-        <div id="section-att" class="content-section">
+        <div id="section-att" class="content-section" style="display:none;">
             <div class="sub-filter-area">
                 <input type="date" id="attDate" class="date-input" onchange="resetAndRender()">
                 <div class="sub-tabs">
@@ -109,27 +119,45 @@
     </div>
 </div>
 
-<button class="fab" id="fab-add" style="display: none;" onclick="handleAdd()"><i class="fas fa-plus"></i></button>
+<button class="fab" id="fab-add" style="display: none;" onclick="handleAdd()">
+    <i class="fas fa-plus"></i>
+</button>
 
 <script>
-    // ตรวจสอบสิทธิ์ระดับ 1 เท่านั้น
+    let userData = {};
+    let currentTab = '';
+    let filters = { att: 'comp', leave: 'all' };
+    let pages = { att: 1, leave: 1, person: 1 };
+    let personnelMap = {};
+    let totalItems = 0;
+    let leaveTypes = [];
+
+    // ระบบจัดการสิทธิ์
     const checkAccess = () => {
-        const userData = JSON.parse(localStorage.getItem('tas_user') || '{}');
-        const userLevel = String(userData.level || '');
-        if (userLevel !== '1') {
-            Swal.fire({
-                icon: 'error', title: 'ปฏิเสธการเข้าถึง', text: 'เฉพาะผู้ดูแลระบบระดับสูงเท่านั้น', confirmButtonText: 'กลับหน้าเมนู', allowOutsideClick: false
-            }).then(() => { window.location.replace('menu.html'); });
+        userData = JSON.parse(localStorage.getItem('tas_user') || '{}');
+        const level = String(userData.level || '');
+
+        if (level !== '1' && level !== '2') {
+            window.location.replace('login.html');
             return false;
         }
+
+        const tabsHtml = [];
+        if (level === '1') {
+            tabsHtml.push('<button id="tab-att-btn" class="tab-btn" onclick="changeMainTab(\'att\')">🕒 ลงเวลา</button>');
+        }
+        tabsHtml.push('<button id="tab-leave-btn" class="tab-btn" onclick="changeMainTab(\'leave\')">✈️ การลา</button>');
+        tabsHtml.push('<button id="tab-person-btn" class="tab-btn" onclick="changeMainTab(\'person\')">👥 พนักงาน</button>');
+        
+        document.getElementById('main-tabs').innerHTML = tabsHtml.join('');
         document.getElementById('app-container').style.display = 'flex';
         document.getElementById('fab-add').style.display = 'flex';
+        
+        // Default tab based on access
+        changeMainTab(level === '1' ? 'att' : 'leave');
         return true;
     };
 
-    let currentTab = 'att', filters = { att: 'comp', leave: 'all' }, pages = { att: 1, leave: 1, person: 1 }, personnelMap = {}, totalItems = 0, leaveTypes = [];
-
-    // คำนวณจำนวนแถวแบ่งหน้าอัตโนมัติตามขนาดจอ
     function getPageSize() {
         const contentH = document.getElementById('main-content').clientHeight;
         const activeFilterH = document.querySelector(`#section-${currentTab} .sub-filter-area`)?.clientHeight || 0;
@@ -139,7 +167,7 @@
     document.addEventListener('DOMContentLoaded', async () => {
         if (!checkAccess()) return;
         const today = new Date().toISOString().split('T')[0];
-        document.getElementById('attDate').value = today;
+        if(document.getElementById('attDate')) document.getElementById('attDate').value = today;
         document.getElementById('leaveDate').value = today;
         await loadMasterData();
         render();
@@ -147,22 +175,25 @@
     });
 
     async function loadMasterData() {
-        // ดึงรายชื่อพนักงาน
         const { data: pData } = await sbClient.from('Personnel').select('personnel_id, name');
         pData?.forEach(p => personnelMap[p.personnel_id] = p.name);
 
-        // ดึงประเภทการลาจากตาราง Settings เท่านั้น
         const { data: sData } = await sbClient.from('Settings').select('value').eq('key', 'leave_types').single();
-        if (sData && sData.value) {
-            leaveTypes = sData.value.split(',').map(t => t.trim());
-        } else {
-            leaveTypes = ['ลาป่วย', 'ลากิจ', 'ลาพักร้อน']; // Fallback
-        }
+        leaveTypes = sData?.value ? sData.value.split(',').map(t => t.trim()) : ['ลาป่วย', 'ลากิจ', 'ลาพักร้อน'];
+    }
+
+    // รูปแบบ ววดดปปปป (ไทย)
+    function formatDateThai(dateStr) {
+        if(!dateStr) return '';
+        const d = new Date(dateStr);
+        return d.toLocaleDateString('th-TH', {day:'2-digit', month:'2-digit', year:'numeric'});
     }
 
     function changeMainTab(t) {
         currentTab = t;
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.id === `tab-${t}-btn`));
+        document.querySelectorAll('.tab-btn').forEach(b => {
+            b.classList.toggle('active', b.id === `tab-${t}-btn`);
+        });
         document.querySelectorAll('.content-section').forEach(s => s.style.display = 'none');
         document.getElementById(`section-${t}`).style.display = 'block';
         resetAndRender();
@@ -192,7 +223,7 @@
         else query = query.or('time_in.is.null,time_out.is.null');
         const { data, count } = await query.order('time_in', {ascending:true}).range(f, t);
         totalItems = count || 0;
-        document.getElementById('list-att').innerHTML = data?.map(r => `<div class="data-item item-att"><div><strong>${personnelMap[r.personnel_id] || 'ID: '+r.personnel_id}</strong><div style="margin-top:4px;"><span class="badge ${r.time_in?'bg-green':'bg-red'}">เข้า: ${r.time_in?.slice(0,5)||'--:--'}</span> <span class="badge ${r.time_out?'bg-green':'bg-red'}">ออก: ${r.time_out?.slice(0,5)||'--:--'}</span></div></div><div class="actions"><button class="btn-icon" onclick="editAtt('${r.id}','${r.time_in}','${r.time_out}')"><i class="fas fa-edit"></i></button><button class="btn-icon" onclick="delRec('TimeStamp','${r.id}')"><i class="fas fa-trash text-danger"></i></button></div></div>`).join('') || '<center>ไม่มีข้อมูล</center>';
+        document.getElementById('list-att').innerHTML = data?.map(r => `<div class="data-item item-att"><div><strong>${personnelMap[r.personnel_id] || 'ID: '+r.personnel_id}</strong><div style="font-size:0.75rem; color:var(--muted)">วันที่: ${formatDateThai(r.work_date)}</div><div style="margin-top:4px;"><span class="badge ${r.time_in?'bg-green':'bg-red'}">เข้า: ${r.time_in?.slice(0,5)||'--:--'}</span> <span class="badge ${r.time_out?'bg-green':'bg-red'}">ออก: ${r.time_out?.slice(0,5)||'--:--'}</span></div></div><div class="actions"><button class="btn-icon" onclick="editAtt('${r.id}','${r.time_in}','${r.time_out}')"><i class="fas fa-edit"></i></button><button class="btn-icon" onclick="delRec('TimeStamp','${r.id}')"><i class="fas fa-trash text-danger"></i></button></div></div>`).join('') || '<center>ไม่มีข้อมูล</center>';
     }
 
     async function renderLeave(f, t) {
@@ -200,7 +231,7 @@
         if(filters.leave === 'date') query = query.eq('leave_date', document.getElementById('leaveDate').value);
         const { data, count } = await query.order('leave_date', {ascending:false}).range(f, t);
         totalItems = count || 0;
-        document.getElementById('list-leave').innerHTML = data?.map(r => `<div class="data-item item-leave"><div><small style="color:var(--primary); font-weight:bold;">📅 ${new Date(r.leave_date).toLocaleDateString('th-TH')}</small><br><strong>${personnelMap[r.personnel_id] || r.personnel_id}</strong> <span class="badge" style="background:#fff7ed; color:#c2410c; margin-left:5px;">${r.leave_type}</span></div><div class="actions"><button class="btn-icon" onclick="editLeave('${r.id}','${r.leave_date}','${r.leave_type}')"><i class="fas fa-edit"></i></button><button class="btn-icon" onclick="delRec('Leave_records','${r.id}')"><i class="fas fa-trash text-danger"></i></button></div></div>`).join('') || '<center>ไม่มีข้อมูล</center>';
+        document.getElementById('list-leave').innerHTML = data?.map(r => `<div class="data-item item-leave"><div><small style="color:var(--primary); font-weight:bold;">📅 ${formatDateThai(r.leave_date)}</small><br><strong>${personnelMap[r.personnel_id] || r.personnel_id}</strong> <span class="badge" style="background:#fff7ed; color:#c2410c; margin-left:5px;">${r.leave_type}</span></div><div class="actions"><button class="btn-icon" onclick="editLeave('${r.id}','${r.leave_date}','${r.leave_type}')"><i class="fas fa-edit"></i></button><button class="btn-icon" onclick="delRec('Leave_records','${r.id}')"><i class="fas fa-trash text-danger"></i></button></div></div>`).join('') || '<center>ไม่มีข้อมูล</center>';
     }
 
     async function renderPerson(f, t) {
@@ -210,13 +241,16 @@
     }
 
     async function delRec(tbl, id, col='id') { if((await Swal.fire({title:'ลบข้อมูล?', icon:'warning', showCancelButton:true, confirmButtonColor: '#ef4444', confirmButtonText: 'ลบ'})).isConfirmed) { await sbClient.from(tbl).delete().eq(col, id); render(); } }
+    
     async function editAtt(id, tin, tout) { const { value: f } = await Swal.fire({ title: 'แก้ไขเวลา', html: `เข้า: <input id="sw-in" type="time" class="swal2-input" value="${tin?.slice(0,5)||''}"> ออก: <input id="sw-out" type="time" class="swal2-input" value="${tout?.slice(0,5)||''}">`, preConfirm: () => ({ time_in: document.getElementById('sw-in').value || null, time_out: document.getElementById('sw-out').value || null }) }); if(f) { await sbClient.from('TimeStamp').update(f).eq('id', id); render(); } }
+    
     async function editLeave(id, date, type) { const { value: f } = await Swal.fire({ title: 'แก้ไขการลา', html: `วันที่: <input id="sw-date" type="date" class="swal2-input" value="${date}"> ประเภท: <select id="sw-type" class="swal2-input">${leaveTypes.map(t => `<option value="${t}" ${t===type?'selected':''}>${t}</option>`).join('')}</select>`, preConfirm: () => ({ leave_date: document.getElementById('sw-date').value, leave_type: document.getElementById('sw-type').value }) }); if(f) { await sbClient.from('Leave_records').update(f).eq('id', id); render(); } }
+    
     async function editPerson(id, name) { const { value: n } = await Swal.fire({ title: 'แก้ไขชื่อ', input: 'text', inputValue: name }); if(n) { await sbClient.from('Personnel').update({name: n}).eq('personnel_id', id); await loadMasterData(); render(); } }
 
     async function handleAdd() {
         if (currentTab === 'person') {
-            const { value: f } = await Swal.fire({ title: 'เพิ่มพนักงานใหม่', html: `<input id="sw-pid" placeholder="รหัสพนักงาน" class="swal2-input"><input id="sw-name" placeholder="ชื่อ-นามสกุล" class="swal2-input">`, preConfirm: () => ({ personnel_id: document.getElementById('sw-pid').value, name: document.getElementById('sw-name').value }) });
+            const { value: f } = await Swal.fire({ title: 'เพิ่มพนักงาน', html: `<input id="sw-pid" placeholder="รหัส" class="swal2-input"><input id="sw-name" placeholder="ชื่อ" class="swal2-input">`, preConfirm: () => ({ personnel_id: document.getElementById('sw-pid').value, name: document.getElementById('sw-name').value }) });
             if (f?.personnel_id) { await sbClient.from('Personnel').insert([f]); await loadMasterData(); render(); }
         } else if (currentTab === 'leave') {
             let selectedDate = new Date().toISOString().split('T')[0];
@@ -247,6 +281,25 @@
                 }
             });
             if (f) { await sbClient.from('Leave_records').insert([f]); render(); }
+        } else if (currentTab === 'att') {
+             // เพิ่มฟังก์ชันกรณีแอดมินต้องการเพิ่มเวลาทำงานเอง (Manual In/Out)
+             const { value: f } = await Swal.fire({
+                title: 'ลงเวลาทำงานด้วยมือ',
+                html: `
+                    <select id="sw-pid" class="swal2-input">${Object.entries(personnelMap).map(([id, n])=>`<option value="${id}">${n}</option>`)}</select>
+                    <input id="sw-date" type="date" class="swal2-input" value="${new Date().toISOString().split('T')[0]}">
+                    <input id="sw-in" type="time" class="swal2-input">
+                    <input id="sw-out" type="time" class="swal2-input">
+                `,
+                preConfirm: () => ({
+                    id: Date.now().toString(),
+                    personnel_id: document.getElementById('sw-pid').value,
+                    work_date: document.getElementById('sw-date').value,
+                    time_in: document.getElementById('sw-in').value || null,
+                    time_out: document.getElementById('sw-out').value || null
+                })
+             });
+             if(f) { await sbClient.from('TimeStamp').insert([f]); render(); }
         }
     }
 </script>
