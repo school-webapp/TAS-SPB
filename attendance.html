@@ -18,28 +18,24 @@
         }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: 'Sarabun', sans-serif; background: var(--bg); color: var(--text); padding: 10px; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
-        
         .container { max-width: 800px; margin: 0 auto; width: 100%; flex: 1; display: flex; flex-direction: column; }
 
-        /* Header & Main Tabs */
-        .card-header { background: white; padding: 15px; border-radius: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 10px; border-bottom: 4px solid var(--primary); }
+        .card-header { background: white; padding: 15px; border-radius: 20px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05); margin-bottom: 10px; border-bottom: 4px solid var(--primary); }
         .tabs { display: flex; background: #fdf2f8; padding: 5px; border-radius: 15px; margin-bottom: 10px; flex-shrink: 0; }
-        .tab-btn { flex: 1; padding: 10px; border: none; background: transparent; border-radius: 10px; cursor: pointer; font-weight: 700; color: var(--muted); font-size: 0.9rem; transition: 0.3s; }
+        .tab-btn { flex: 1; padding: 12px; border: none; background: transparent; border-radius: 10px; cursor: pointer; font-weight: 700; color: var(--muted); font-size: 0.9rem; transition: 0.3s; }
         .tab-btn.active { background: var(--primary); color: white; }
 
-        /* Sub Filter UI */
         .sub-filter-area { margin-bottom: 10px; flex-shrink: 0; }
         .sub-tabs { display: flex; gap: 5px; background: #fff; padding: 5px; border-radius: 12px; border: 1px solid var(--border); }
         .sub-btn { flex: 1; padding: 8px; border: none; background: transparent; border-radius: 8px; cursor: pointer; font-size: 0.8rem; font-weight: bold; color: var(--muted); }
         .sub-btn.active { background: var(--primary); color: white; }
 
-        /* List Styling */
         .content-scroll { flex: 1; overflow-y: auto; display: flex; flex-direction: column; padding-bottom: 80px; }
         .data-list { display: grid; gap: 8px; align-content: start; }
         .data-item { 
             background: white; padding: 12px; border-radius: 15px; border-left: 5px solid #ccc; 
             display: flex; justify-content: space-between; align-items: center; 
-            box-shadow: 0 2px 4px rgba(0,0,0,0.02); min-height: 85px; 
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02); min-height: 85px; 
         }
         .item-att { border-left-color: var(--primary); }
         .item-leave { border-left-color: #f59e0b; }
@@ -49,24 +45,21 @@
         .bg-green { background: #dcfce7; color: #166534; }
         .bg-red { background: #fee2e2; color: #991b1b; }
         
-        .date-input { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 12px; font-family: 'Sarabun'; margin-bottom: 8px; font-size: 0.9rem; }
+        .date-input { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 12px; font-family: 'Sarabun'; margin-bottom: 10px; font-size: 1rem; text-align: center; color: var(--text); }
         
-        /* Pager UI */
         .pager { display: flex; justify-content: center; align-items: center; gap: 15px; padding: 10px 0; flex-shrink: 0; }
         .btn-page { width: 35px; height: 35px; border-radius: 10px; border: 1px solid var(--border); background: white; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-        .btn-page:disabled { opacity: 0.3; }
         
         .actions { display: flex; gap: 5px; }
         .btn-icon { width: 32px; height: 32px; border-radius: 8px; border: none; background: #f3f4f6; color: var(--muted); cursor: pointer; display: flex; align-items: center; justify-content: center; }
 
-        /* FAB ปุ่ม (+) ศูนย์กลาง */
         .fab { 
             position: fixed; bottom: 30px; right: 25px; 
-            width: 60px; height: 60px; 
+            width: 65px; height: 65px; 
             background: linear-gradient(135deg, #ec4899, #be185d); 
             color: white; border-radius: 50%; border: none; 
             display: flex; align-items: center; justify-content: center;
-            font-size: 1.5rem; cursor: pointer; z-index: 1000;
+            font-size: 1.8rem; cursor: pointer; z-index: 1000;
             box-shadow: 0 8px 15px rgba(236, 72, 153, 0.4);
             transition: 0.3s;
         }
@@ -78,7 +71,7 @@
 <div class="container" id="app-container" style="display: none;">
     <div class="card-header">
         <div style="display:flex; justify-content:space-between; align-items:center;">
-            <h2 style="font-size:1.1rem;"><i class="fas fa-user-cog"></i> จัดการ TAS-SPB</h2>
+            <h2 style="font-size:1.1rem;"><i class="fas fa-user-cog"></i> ระบบจัดการ TAS-SPB</h2>
             <a href="menu.html" style="color:var(--primary);"><i class="fas fa-home fa-lg"></i></a>
         </div>
     </div>
@@ -136,11 +129,15 @@
     let totalItems = 0;
     let leaveTypes = [];
 
-    // ฟังก์ชันช่วยแสดงวันที่แบบไทย วว/ดด/ปปปป (พ.ศ.)
+    // ฟังก์ชันแสดงวันที่แบบ วัน/เดือน/ปี (พ.ศ. ไทย)
     function fmtThai(d) {
-        if(!d) return '-';
+        if (!d) return '-';
         const date = new Date(d);
-        return date.toLocaleDateString('th-TH', {day:'2-digit', month:'2-digit', year:'numeric'});
+        return date.toLocaleDateString('th-TH', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric'
+        });
     }
 
     const checkAccess = () => {
@@ -169,7 +166,7 @@
     document.addEventListener('DOMContentLoaded', async () => {
         if (!checkAccess()) return;
         const today = new Date().toISOString().split('T')[0];
-        if(document.getElementById('attDate')) document.getElementById('attDate').value = today;
+        if (document.getElementById('attDate')) document.getElementById('attDate').value = today;
         document.getElementById('leaveDate').value = today;
         await loadMasterData();
         render();
@@ -200,8 +197,8 @@
     async function render() {
         const size = getPageSize();
         const from = (pages[currentTab] - 1) * size, to = from + size - 1;
-        if(currentTab === 'att') await renderAtt(from, to);
-        else if(currentTab === 'leave') await renderLeave(from, to);
+        if (currentTab === 'att') await renderAtt(from, to);
+        else if (currentTab === 'leave') await renderLeave(from, to);
         else await renderPerson(from, to);
         const maxP = Math.ceil(totalItems / size) || 1;
         document.getElementById('pageInfo').innerText = `หน้า ${pages[currentTab]} / ${maxP}`;
@@ -211,10 +208,10 @@
 
     async function renderAtt(f, t) {
         const date = document.getElementById('attDate').value;
-        let q = sbClient.from('TimeStamp').select('*', {count:'exact'}).eq('work_date', date);
-        if(filters.att === 'comp') q = q.not('time_in', 'is', null).not('time_out', 'is', null);
+        let q = sbClient.from('TimeStamp').select('*', {count: 'exact'}).eq('work_date', date);
+        if (filters.att === 'comp') q = q.not('time_in', 'is', null).not('time_out', 'is', null);
         else q = q.or('time_in.is.null,time_out.is.null');
-        const { data, count } = await q.order('time_in', {ascending:true}).range(f, t);
+        const { data, count } = await q.order('time_in', {ascending: true}).range(f, t);
         totalItems = count || 0;
         document.getElementById('list-att').innerHTML = data?.map(r => `
             <div class="data-item item-att">
@@ -222,8 +219,8 @@
                     <strong>${personnelMap[r.personnel_id] || r.full_name}</strong><br>
                     <small>วันที่: ${fmtThai(r.work_date)}</small>
                     <div style="margin-top:4px;">
-                        <span class="badge ${r.time_in?'bg-green':'bg-red'}">IN: ${r.time_in?.slice(0,5)||'--:--'}</span>
-                        <span class="badge ${r.time_out?'bg-green':'bg-red'}">OUT: ${r.time_out?.slice(0,5)||'--:--'}</span>
+                        <span class="badge ${r.time_in ? 'bg-green' : 'bg-red'}">IN: ${r.time_in?.slice(0, 5) || '--:--'}</span>
+                        <span class="badge ${r.time_out ? 'bg-green' : 'bg-red'}">OUT: ${r.time_out?.slice(0, 5) || '--:--'}</span>
                     </div>
                 </div>
                 <div class="actions">
@@ -234,9 +231,9 @@
     }
 
     async function renderLeave(f, t) {
-        let q = sbClient.from('Leave_records').select('*', {count:'exact'});
-        if(filters.leave === 'date') q = q.eq('leave_date', document.getElementById('leaveDate').value);
-        const { data, count } = await q.order('leave_date', {ascending:false}).range(f, t);
+        let q = sbClient.from('Leave_records').select('*', {count: 'exact'});
+        if (filters.leave === 'date') q = q.eq('leave_date', document.getElementById('leaveDate').value);
+        const { data, count } = await q.order('leave_date', {ascending: false}).range(f, t);
         totalItems = count || 0;
         document.getElementById('list-leave').innerHTML = data?.map(r => `
             <div class="data-item item-leave">
@@ -253,9 +250,9 @@
     }
 
     async function renderPerson(f, t) {
-        const { data, count } = await sbClient.from('Personnel').select('*', {count:'exact'}).order('personnel_id').range(f, t);
+        const { data, count } = await sbClient.from('Personnel').select('*', {count: 'exact'}).order('personnel_id').range(f, t);
         totalItems = count || 0;
-        const canEdit = userData.level == 1;
+        const isAdmin = userData.level == 1;
         document.getElementById('list-person').innerHTML = data?.map(p => `
             <div class="data-item item-person">
                 <div style="flex:1">
@@ -263,25 +260,22 @@
                     <small>รหัส: ${p.personnel_id}</small><br>
                     <small>เริ่มงาน: ${fmtThai(p.start_date)}</small>
                 </div>
-                <div class="actions" style="${canEdit ? '' : 'display:none'}">
+                <div class="actions" style="${isAdmin ? '' : 'display:none'}">
                     <button class="btn-icon" onclick="editPerson('${p.personnel_id}','${p.name}')"><i class="fas fa-edit"></i></button>
                     <button class="btn-icon" onclick="delRec('Personnel','${p.personnel_id}','personnel_id')"><i class="fas fa-trash text-danger"></i></button>
                 </div>
             </div>`).join('') || '<center>ไม่มีรายชื่อ</center>';
     }
 
-    async function delRec(tbl, id, col='id') { if((await Swal.fire({title:'ลบข้อมูล?', icon:'warning', showCancelButton:true, confirmButtonColor:'#ef4444'})).isConfirmed) { await sbClient.from(tbl).delete().eq(col, id); render(); } }
-    
-    async function editAtt(id, tin, tout) { const { value: f } = await Swal.fire({ title:'แก้ไขเวลา', html:`เข้า: <input id="sw-in" type="time" class="swal2-input" value="${tin?.slice(0,5)||''}"> ออก: <input id="sw-out" type="time" class="swal2-input" value="${tout?.slice(0,5)||''}">`, preConfirm:()=>({ time_in: document.getElementById('sw-in').value || null, time_out: document.getElementById('sw-out').value || null }) }); if(f) { await sbClient.from('TimeStamp').update(f).eq('id', id); render(); } }
-    
-    async function editLeave(id, date, type) { const { value: f } = await Swal.fire({ title:'แก้ไขการลา', html:`วันที่: <input id="sw-date" type="date" class="swal2-input" value="${date}"> ประเภท: <select id="sw-type" class="swal2-input">${leaveTypes.map(t => `<option value="${t}" ${t===type?'selected':''}>${t}</option>`).join('')}</select>`, preConfirm:()=>({ leave_date: document.getElementById('sw-date').value, leave_type: document.getElementById('sw-type').value }) }); if(f) { await sbClient.from('Leave_records').update(f).eq('id', id); render(); } }
-    
-    async function editPerson(id, name) { const { value: n } = await Swal.fire({ title:'แก้ไขชื่อ', input:'text', inputValue:name }); if(n) { await sbClient.from('Personnel').update({name:n}).eq('personnel_id', id); await loadMasterData(); render(); } }
+    async function delRec(tbl, id, col = 'id') { if ((await Swal.fire({title: 'ยืนยันการลบ?', icon: 'warning', showCancelButton: true, confirmButtonColor: '#ef4444'})).isConfirmed) { await sbClient.from(tbl).delete().eq(col, id); render(); } }
+    async function editAtt(id, tin, tout) { const { value: f } = await Swal.fire({ title: 'แก้ไขเวลา', html: `เข้า: <input id="sw-in" type="time" class="swal2-input" value="${tin?.slice(0, 5) || ''}"> ออก: <input id="sw-out" type="time" class="swal2-input" value="${tout?.slice(0, 5) || ''}">`, preConfirm: () => ({ time_in: document.getElementById('sw-in').value || null, time_out: document.getElementById('sw-out').value || null }) }); if (f) { await sbClient.from('TimeStamp').update(f).eq('id', id); render(); } }
+    async function editLeave(id, date, type) { const { value: f } = await Swal.fire({ title: 'แก้ไขการลา', html: `วันที่: <input id="sw-date" type="date" class="swal2-input" value="${date}"> ประเภท: <select id="sw-type" class="swal2-input">${leaveTypes.map(t => `<option value="${t}" ${t === type ? 'selected' : ''}>${t}</option>`).join('')}</select>`, preConfirm: () => ({ leave_date: document.getElementById('sw-date').value, leave_type: document.getElementById('sw-type').value }) }); if (f) { await sbClient.from('Leave_records').update(f).eq('id', id); render(); } }
+    async function editPerson(id, name) { const { value: n } = await Swal.fire({ title: 'แก้ไขชื่อ', input: 'text', inputValue: name }); if (n) { await sbClient.from('Personnel').update({name: n}).eq('personnel_id', id); await loadMasterData(); render(); } }
 
     async function handleAdd() {
         if (currentTab === 'person') {
             const { value: f } = await Swal.fire({ 
-                title: 'เพิ่มบุคลากร', 
+                title: 'เพิ่มบุคลากรใหม่', 
                 html: `<input id="sw-pid" placeholder="รหัสบุคลากร" class="swal2-input"><input id="sw-name" placeholder="ชื่อ-นามสกุล" class="swal2-input"><div style="text-align:left; padding:0 20px;"><small>วันเริ่มงาน:</small></div><input id="sw-start" type="date" class="swal2-input" value="${new Date().toISOString().split('T')[0]}">`, 
                 preConfirm: () => ({ personnel_id: document.getElementById('sw-pid').value, name: document.getElementById('sw-name').value, start_date: document.getElementById('sw-start').value, level: 3 }) 
             });
@@ -338,7 +332,7 @@
                         </div>
                         <div style="margin-bottom:20px;">
                             <label style="font-weight:bold; font-size:0.85rem; color:#6b7280; display:block; margin-bottom:5px;">ระบุเวลา</label>
-                            <input id="sw-time" type="time" class="swal2-input" style="margin:0; width:100%; border-radius:12px; text-align:center; font-size:1.2rem; font-weight:bold;" value="${new Date().toTimeString().slice(0,5)}">
+                            <input id="sw-time" type="time" class="swal2-input" style="margin:0; width:100%; border-radius:12px; text-align:center; font-size:1.2rem; font-weight:bold;" value="${new Date().toTimeString().slice(0, 5)}">
                         </div>
                         <div style="display:flex; gap:10px;">
                             <button id="btn-in" style="flex:1; padding:14px; border-radius:12px; border:2px solid #10b981; background:#f0fdf4; color:#10b981; font-weight:bold; cursor:pointer;" onclick="window.setMode('in')">บันทึกเข้า</button>
@@ -351,18 +345,18 @@
                     const update = (term = "") => {
                         const filtered = personnelList.filter(p => p.name.includes(term));
                         select.innerHTML = filtered.map(p => `<option value="${p.personnel_id}" style="padding:10px; border-bottom:1px solid #fdf2f8;">${p.name}</option>`).join('');
-                        if(filtered.length) select.selectedIndex = 0;
+                        if (filtered.length) select.selectedIndex = 0;
                     };
                     search.addEventListener('input', (e) => update(e.target.value)); update();
                     window.setMode = (m) => {
                         mode = m;
                         const bin = document.getElementById('btn-in'), bout = document.getElementById('btn-out');
-                        if(m === 'in'){
-                            bin.style.background='#f0fdf4'; bin.style.borderColor='#10b981'; bin.style.color='#10b981';
-                            bout.style.background='white'; bout.style.borderColor='#e5e7eb'; bout.style.color='#9ca3af';
+                        if (m === 'in') {
+                            bin.style.background = '#f0fdf4'; bin.style.borderColor = '#10b981'; bin.style.color = '#10b981';
+                            bout.style.background = 'white'; bout.style.borderColor = '#e5e7eb'; bout.style.color = '#9ca3af';
                         } else {
-                            bout.style.background='#fef2f2'; bout.style.borderColor='#ef4444'; bout.style.color='#ef4444';
-                            bin.style.background='white'; bin.style.borderColor='#e5e7eb'; bin.style.color='#9ca3af';
+                            bout.style.background = '#fef2f2'; bout.style.borderColor = '#ef4444'; bout.style.color = '#ef4444';
+                            bin.style.background = 'white'; bin.style.borderColor = '#e5e7eb'; bin.style.color = '#9ca3af';
                         }
                     };
                 },
@@ -370,8 +364,8 @@
                     const pid = document.getElementById('sw-pid').value;
                     const date = document.getElementById('sw-date').value;
                     const time = document.getElementById('sw-time').value;
-                    if(!pid) return Swal.showValidationMessage('กรุณาเลือกชื่อพนักงาน');
-                    const res = { id:`${date.replace(/-/g,'')}${pid}`, personnel_id:pid, full_name:personnelMap[pid], work_date:date, verified:0 };
+                    if (!pid) return Swal.showValidationMessage('กรุณาเลือกชื่อพนักงาน');
+                    const res = { id: `${date.replace(/-/g, '')}${pid}`, personnel_id: pid, full_name: personnelMap[pid], work_date: date, verified: 0 };
                     res[mode === 'in' ? 'time_in' : 'time_out'] = time + ":00";
                     return res;
                 }
