@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>ผู้ไม่มีข้อมูลการลงเวลา - TAS-SPB</title>
+    <link rel="icon" type="image/png" href="favicon.png">
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="supabase.js"></script>
@@ -11,19 +12,23 @@
     <script src="config.js"></script>
 
     <style>
-        :root { --primary: #ec4899; --bg: #f3f4f6; --text: #1f2937; --muted: #6b7280; --border: #e5e7eb; }
+        :root { --primary: #ec4899; --bg: #f3f4f6; --text: #1f2937; --muted: #6b7280; --border: #e5e7eb; --danger: #ef4444; }
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Sarabun', sans-serif; background: var(--bg); color: var(--text); padding: 10px; height: 100vh; display: flex; flex-direction: column; }
+        body { font-family: 'Sarabun', sans-serif; background: var(--bg); color: var(--text); padding: 10px; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
         .container { max-width: 800px; margin: 0 auto; width: 100%; flex: 1; display: flex; flex-direction: column; }
+        
         .card-header { background: white; padding: 15px; border-radius: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 10px; border-bottom: 4px solid var(--primary); }
+        
         .content-scroll { flex: 1; overflow-y: auto; padding-bottom: 20px; }
+        .data-list { display: grid; gap: 8px; align-content: start; }
         .data-item { 
-            background: white; padding: 15px; border-radius: 15px; margin-bottom: 8px;
+            background: white; padding: 15px; border-radius: 15px;
             display: flex; justify-content: space-between; align-items: center;
             border-left: 5px solid var(--danger); box-shadow: 0 2px 4px rgba(0,0,0,0.02);
         }
-        .status-badge { background: #fee2e2; color: #ef4444; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: bold; }
-        .loading-box { text-align: center; padding: 40px; color: var(--muted); }
+        
+        .status-badge { background: #fee2e2; color: var(--danger); padding: 5px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: bold; }
+        .loading-box { text-align: center; padding: 50px 20px; color: var(--muted); }
     </style>
 </head>
 <body>
@@ -34,13 +39,14 @@
             <h2 style="font-size:1.1rem;"><i class="fas fa-user-slash"></i> ผู้ไม่มีข้อมูลการลงเวลา</h2>
             <a href="menu.html" style="color:var(--primary);"><i class="fas fa-home fa-lg"></i></a>
         </div>
-        <div style="margin-top:10px; font-size:0.85rem; color:var(--muted);">
+        <div style="margin-top:8px; font-size:0.85rem; color:var(--muted);">
             วันที่ตรวจสอบ: <span id="display-date" style="font-weight:bold; color:var(--primary);"></span>
         </div>
     </div>
 
     <div id="loading" class="loading-box">
-        <i class="fas fa-spinner fa-spin fa-2x"></i><br><br>กำลังตรวจสอบข้อมูลจากทุกช่องทาง...
+        <i class="fas fa-spinner fa-spin fa-2x"></i><br><br>
+        <span>กำลังตรวจสอบความผิดปกติของข้อมูลจากเครื่องสแกนและระบบ...</span>
     </div>
 
     <div class="content-scroll" id="main-list" style="display:none;">
@@ -49,32 +55,57 @@
 </div>
 
 <script>
-    const today = new Date().toISOString().split('T')[0];
-    // แสดงวันที่ วว/ดด/ปปปป ไทย
-    document.getElementById('display-date').innerText = new Date().toLocaleDateString('th-TH', {day:'2-digit', month:'2-digit', year:'numeric'});
+    const now = new Date();
+    const todayDB = now.toISOString().split('T')[0]; // สำหรับ Query DB (YYYY-MM-DD)
 
-    document.addEventListener('DOMContentLoaded', async () => {
-        const user = JSON.parse(localStorage.getItem('tas_user') || '{}');
-        if (user.level != '1' && user.level != '2') { window.location.replace('menu.html'); return; }
-        checkAbsentees();
+    // แสดงวันที่ไทย วว/ดด/ปปปป
+    document.getElementById('display-date').innerText = now.toLocaleDateString('th-TH', {
+        day: '2-digit', month: '2-digit', year: 'numeric'
     });
 
-    async function checkAbsentees() {
+    document.addEventListener('DOMContentLoaded', async () => {
+        const stored = localStorage.getItem('tas_user');
+        if (!stored) { window.location.replace('login.html'); return; }
+        
+        const user = JSON.parse(stored);
+        // สิทธิ์เฉพาะระดับ 1 และ 2
+        if (user.level != '1' && user.level != '2') { 
+            window.location.replace('menu.html'); 
+            return; 
+        }
+        fetchAbsentData();
+    });
+
+    async function fetchAbsentData() {
         try {
             // 1. ดึงพนักงานทั้งหมด
-            const { data: allPersonnel } = await sbClient.from('Personnel').select('personnel_id, name');
+            const { data: allP } = await sbClient.from('Personnel').select('personnel_id, name').order('name');
 
-            // 2. ดึงข้อมูลจาก TimeStamp ใน DB วันนี้
-            const { data: dbAttended } = await sbClient.from('TimeStamp').select('personnel_id').eq('work_date', today);
+            // 2. ดึงคนลงเวลาใน DB วันนี้
+            const { data: dbAttended } = await sbClient.from('TimeStamp').select('personnel_id').eq('work_date', todayDB);
 
-            // 3. ดึงข้อมูลจาก URL (จำลองหลักการของ process.html)
+            // 3. ดึงข้อมูลจาก URL ภายนอกพร้อมจัดการรูปแบบ URL
             let webAttendedIds = [];
             const { data: config } = await sbClient.from('Settings').select('value').eq('key', 'data_url').single();
+            
             if (config?.value) {
+                let base = config.value.trim();
+                
+                // ตรวจสอบเครื่องหมาย "/" ก่อนวันที่
+                if (!base.endsWith('/')) base += '/';
+
+                // วันที่ ค.ศ. DDMMYYYY
+                const day = String(now.getDate()).padStart(2, '0');
+                const month = String(now.getMonth() + 1).padStart(2, '0');
+                const year = now.getFullYear();
+                const dateStr = `${day}${month}${year}`; 
+
+                // รวม URL และปิดท้ายด้วย "/"
+                const finalTargetUrl = base + dateStr + '/';
+                const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(finalTargetUrl)}`;
+
                 try {
-                    const urlDate = today.split('-').reverse().join(''); // DDMMYYYY
-                    const finalUrl = `https://corsproxy.io/?${encodeURIComponent(config.value + urlDate + '/')}`;
-                    const res = await fetch(finalUrl);
+                    const res = await fetch(proxyUrl);
                     if (res.ok) {
                         const html = await res.text();
                         const doc = new DOMParser().parseFromString(html, "text/html");
@@ -84,31 +115,30 @@
                             if (pid && !isNaN(pid)) webAttendedIds.push(pid);
                         });
                     }
-                } catch (e) { console.error("Web fetch failed", e); }
+                } catch (e) { console.warn("Fetch failed, using local DB only."); }
             }
 
-            // 4. รวบรวม ID คนที่มีข้อมูลแล้ว
+            // 4. กรองคนไม่มีข้อมูลทั้ง 2 แหล่ง
             const busyIds = new Set([
                 ...(dbAttended || []).map(r => r.personnel_id),
                 ...webAttendedIds
             ]);
 
-            // 5. กรองคนไม่มีข้อมูล
-            const absentees = allPersonnel.filter(p => !busyIds.has(p.personnel_id));
+            const absentees = (allP || []).filter(p => !busyIds.has(p.personnel_id));
 
-            renderList(absentees);
+            render(absentees);
         } catch (err) {
             Swal.fire('Error', 'ไม่สามารถโหลดข้อมูลได้', 'error');
         }
     }
 
-    function renderList(list) {
+    function render(list) {
         document.getElementById('loading').style.display = 'none';
         document.getElementById('main-list').style.display = 'block';
-        
         const container = document.getElementById('absent-list');
+
         if (list.length === 0) {
-            container.innerHTML = '<center style="padding:40px; color:#9ca3af;">-- วันนี้พนักงานทุกคนลงเวลาครบแล้ว --</center>';
+            container.innerHTML = '<center style="padding:50px; color:#9ca3af;">ทุกคนลงเวลาเรียบร้อยแล้ว</center>';
             return;
         }
 
@@ -116,7 +146,7 @@
             <div class="data-item">
                 <div>
                     <strong style="font-size:1rem;">${p.name}</strong><br>
-                    <small style="color:var(--muted);">รหัสพนักงาน: ${p.personnel_id}</small>
+                    <small style="color:var(--muted);">ID: ${p.personnel_id}</small>
                 </div>
                 <span class="status-badge">ยังไม่มีข้อมูล</span>
             </div>
