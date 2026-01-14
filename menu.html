@@ -70,10 +70,11 @@
             font-size: 0.95rem;
             text-align: center;
         }
-        /* เมนูพิเศษสำหรับ Admin */
-        .admin-only {
+        /* เมนูพิเศษแสดงเต็มความกว้างสำหรับแอดมิน */
+        .admin-wide {
             grid-column: span 2;
-            background: #fdf2f8;
+            background: #fff5f7;
+            border: 1px solid #fbcfe8;
         }
         .logout-btn {
             margin-top: 40px;
@@ -106,22 +107,20 @@
             <span>ประวัติลงเวลา</span>
         </a>
 
-        <div id="admin-section" style="display: contents;">
-            <a href="absent_report.html" class="menu-item admin-only" id="absent-menu" style="display: none;">
-                <i class="fas fa-user-slash"></i>
-                <span>ผู้ไม่มีข้อมูลการลงเวลา</span>
-            </a>
+        <a href="absent_report.html" class="menu-item admin-wide" id="absent-menu" style="display: none;">
+            <i class="fas fa-user-slash"></i>
+            <span>ผู้ไม่มีข้อมูลการลงเวลา</span>
+        </a>
 
-            <a href="attendance.html" class="menu-item" id="manage-menu" style="display: none;">
-                <i class="fas fa-tasks"></i>
-                <span>จัดการระบบ</span>
-            </a>
+        <a href="attendance.html" class="menu-item" id="manage-menu" style="display: none;">
+            <i class="fas fa-tasks"></i>
+            <span>จัดการระบบ</span>
+        </a>
 
-            <a href="process.html" class="menu-item" id="process-menu" style="display: none;">
-                <i class="fas fa-sync-alt"></i>
-                <span>ประมวลผลข้อมูล</span>
-            </a>
-        </div>
+        <a href="process.html" class="menu-item" id="process-menu" style="display: none;">
+            <i class="fas fa-sync-alt"></i>
+            <span>ประมวลผลข้อมูล</span>
+        </a>
     </div>
 
     <button class="logout-btn" onclick="logout()">ออกจากระบบ</button>
@@ -131,7 +130,7 @@
             const userData = JSON.parse(localStorage.getItem('tas_user') || '{}');
             const level = String(userData.level || '');
 
-            // หากไม่มีข้อมูลผู้ใช้ ให้กลับหน้า Login
+            // หากไม่ใช่ User ระดับ 1 หรือ 2 ให้พากลับหน้า Login หรือซ่อนเมนูบริหารจัดการ
             if (!userData.personnel_id) {
                 window.location.replace('login.html');
                 return;
@@ -139,9 +138,8 @@
 
             document.getElementById('user-info').innerText = `ผู้ใช้งาน: ${userData.name || 'ไม่ได้ระบุชื่อ'}`;
 
-            // การจัดการสิทธิ์การเข้าถึงเมนู
+            // การจัดการสิทธิ์การเข้าถึงเมนูพิเศษ
             if (level === '1' || level === '2') {
-                // แสดงเมนู "ผู้ไม่มีข้อมูลการลงเวลา" สำหรับระดับ 1 และ 2
                 document.getElementById('absent-menu').style.display = 'flex';
                 document.getElementById('manage-menu').style.display = 'flex';
                 document.getElementById('process-menu').style.display = 'flex';
