@@ -6,7 +6,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>ระบบประมวลผลข้อมูล - TAS-SPB</title>
     <link rel="icon" type="image/png" href="favicon.png">
-    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&family=Fira+Code:wght@400&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&family=Fira+Code:wght@400&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <style>
@@ -26,9 +28,10 @@
             align-items: center;
             min-height: 100vh;
             margin: 0;
-            box-sizing: border-box;
+            box-sizing: border-box; /* เพิ่ม box-sizing เพื่อคำนวณขนาดรวมขอบ */
         }
 
+        /* --- ปรับปรุง Header --- */
         .header-section {
             background: white;
             width: 100%;
@@ -59,9 +62,10 @@
             align-items: center;
             justify-content: center;
             font-size: 1.5rem;
-            flex-shrink: 0;
+            flex-shrink: 0; /* ป้องกันไอคอนบีบตัว */
         }
 
+        /* --- ปรับปรุง Grid Layout --- */
         .main-grid {
             display: grid;
             grid-template-columns: 350px 1fr;
@@ -98,13 +102,19 @@
             border: 2px solid transparent;
         }
 
+        .radio-option:hover {
+            background: #f9fafb;
+        }
+
         .radio-option.selected {
             border-color: var(--primary);
             background: #eef2ff;
             color: var(--primary);
         }
 
-        .radio-option input { display: none; }
+        .radio-option input {
+            display: none;
+        }
 
         .radio-circle {
             width: 18px;
@@ -113,6 +123,10 @@
             border-radius: 50%;
             position: relative;
             flex-shrink: 0;
+        }
+
+        .radio-option.selected .radio-circle {
+            border-color: var(--primary);
         }
 
         .radio-option.selected .radio-circle::after {
@@ -149,17 +163,26 @@
             border-radius: 10px;
             cursor: pointer;
             transition: 0.2s;
+            box-shadow: 0 4px 10px rgba(99, 102, 241, 0.3);
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 10px;
         }
 
+        .btn-start:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(99, 102, 241, 0.4);
+        }
+
         .btn-start:disabled {
             background: #cbd5e1;
             cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
         }
 
+        /* --- ปรับปรุง Terminal Window --- */
         .terminal-window {
             background: var(--terminal-bg);
             border-radius: 10px;
@@ -168,6 +191,7 @@
             display: flex;
             flex-direction: column;
             height: 500px;
+            /* ความสูงเริ่มต้นสำหรับ PC */
         }
 
         .terminal-header {
@@ -176,12 +200,28 @@
             display: flex;
             align-items: center;
             gap: 8px;
+            border-bottom: 1px solid #333;
         }
 
-        .dot { width: 12px; height: 12px; border-radius: 50%; }
+        .dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
         .red { background: #ff5f56; }
         .yellow { background: #ffbd2e; }
         .green { background: #27c93f; }
+
+        .terminal-title {
+            margin-left: 15px;
+            color: #9ca3af;
+            font-size: 0.8rem;
+            font-family: 'Sarabun';
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
 
         .terminal-body {
             flex: 1;
@@ -191,20 +231,107 @@
             font-size: 0.85rem;
             color: var(--terminal-text);
             line-height: 1.6;
+            scroll-behavior: smooth;
         }
 
-        .log-line { margin-bottom: 2px; display: flex; align-items: flex-start; }
-        .ts { color: #6b7280; margin-right: 10px; min-width: 75px; font-size: 0.8em; }
-        .msg { white-space: pre-wrap; word-break: break-word; flex: 1; }
+        .log-line {
+            margin-bottom: 2px;
+            display: flex;
+            align-items: flex-start; /* จัดชิดบนเพื่อให้เวลาไม่ลอยเมื่อข้อความยาว */
+        }
+
+        .ts {
+            color: #6b7280;
+            margin-right: 10px;
+            min-width: 70px;
+            user-select: none;
+            font-size: 0.8em;
+            padding-top: 2px;
+        }
+
+        .msg {
+            white-space: pre-wrap;
+            word-break: break-word; /* ตัดคำยาวๆ ไม่ให้ล้นจอ */
+            flex: 1; /* ให้ขยายเต็มพื้นที่ที่เหลือ */
+        }
+
         .c-info { color: #60a5fa; }
         .c-success { color: #4ade80; }
         .c-warn { color: #fbbf24; }
         .c-error { color: #f87171; }
-        .c-highlight { color: #e879f9; font-weight: bold; }
+        .c-highlight {
+            color: #e879f9;
+            font-weight: bold;
+        }
+        .c-detail {
+            color: #94a3b8;
+            padding-left: 20px;
+            font-size: 0.8rem;
+        }
 
+        .checkbox-wrapper {
+            margin-top: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+            color: #6b7280;
+        }
+
+        /* --- Responsive Styles --- */
+
+        /* Tablet & Small Laptop (เปลี่ยนเป็น Stack Column) */
         @media (max-width: 900px) {
-            .main-grid { grid-template-columns: 1fr; }
-            .terminal-window { height: 400px; }
+            .main-grid {
+                grid-template-columns: 1fr; /* คอลัมน์เดียว */
+            }
+
+            .terminal-window {
+                height: 400px; /* ลดความสูงลง */
+            }
+        }
+
+        /* Mobile Devices */
+        @media (max-width: 600px) {
+            body {
+                padding: 10px; /* ลด Padding ขอบจอ */
+            }
+
+            .header-section {
+                flex-direction: column;
+                align-items: stretch; /* ยืดเต็มจอ */
+                padding: 15px;
+                gap: 15px;
+                text-align: center;
+            }
+
+            .header-title {
+                flex-direction: column;
+                justify-content: center;
+            }
+
+            .header-title > div {
+                text-align: center;
+            }
+
+            .header-section a {
+                display: block; /* ปุ่มเมนูเต็มบรรทัด */
+                text-align: center;
+                background-color: #f3f4f6;
+                margin-top: 5px;
+            }
+
+            .control-panel {
+                padding: 20px;
+            }
+
+            .terminal-window {
+                height: 350px; /* ความสูงสำหรับมือถือ */
+            }
+
+            .terminal-body {
+                font-size: 0.8rem; /* ลดขนาดตัวอักษร Terminal เล็กน้อย */
+            }
         }
     </style>
     <script src="supabase.js"></script>
@@ -217,11 +344,12 @@
         <div class="header-title">
             <div class="icon-box"><i class="fas fa-sync-alt"></i></div>
             <div>
-                <h2 style="margin:0; color:#1f2937;">ประมวลผลข้อมูล</h2>
+                <h2 style="margin:0; color:#1f2937; line-height: 1.2;">ประมวลผลข้อมูล</h2>
                 <span style="color:#6b7280; font-size:0.9rem;">ดึงและเชื่อมโยงข้อมูลเข้าระบบ</span>
             </div>
         </div>
-        <a href="menu.html" style="text-decoration:none; color:#4b5563; font-weight:bold; background:#f3f4f6; padding:8px 16px; border-radius:20px;">
+        <a href="menu.html"
+            style="text-decoration:none; color:#4b5563; font-weight:bold; background:#f3f4f6; padding:8px 16px; border-radius:20px;">
             <i class="fas fa-home"></i> เมนู
         </a>
     </div>
@@ -240,9 +368,14 @@
                     <span>ระบุวันที่เฉพาะ:</span>
                 </div>
             </div>
-            <div id="dateGroup" style="display:none;">
+            <div id="dateGroup" style="display:none; animation: fadeIn 0.3s;">
+                <label style="font-size:0.9rem; font-weight:bold; color:#374151;">เลือกช่วงวันที่:</label>
                 <input type="date" id="startDate" class="date-input" style="display:block;">
                 <input type="date" id="endDate" class="date-input" style="display:block; margin-top:5px;">
+            </div>
+            <div class="checkbox-wrapper">
+                <input type="checkbox" id="chkVerbose" checked>
+                <label for="chkVerbose" style="cursor:pointer;">แสดงรายชื่อละเอียด (Verbose)</label>
             </div>
             <hr style="border:0; border-top:1px solid #e5e7eb; margin:20px 0;">
             <button id="btnStart" class="btn-start" onclick="runProcess()">
@@ -251,8 +384,10 @@
         </div>
         <div class="terminal-window">
             <div class="terminal-header">
-                <div class="dot red"></div><div class="dot yellow"></div><div class="dot green"></div>
-                <span style="margin-left:10px; color:#9ca3af; font-size:0.8rem;">process_monitor.sh (V3.5 Smart Logic)</span>
+                <div class="dot red"></div>
+                <div class="dot yellow"></div>
+                <div class="dot green"></div>
+                <span class="terminal-title">process_monitor.sh (V3.4 URL Fixed)</span>
             </div>
             <div class="terminal-body" id="console">
                 <div class="log-line"><span class="ts">--:--:--</span> <span class="msg">> System Ready...</span></div>
@@ -261,20 +396,81 @@
     </div>
 
     <script>
+        // ==========================================
+        // 1. ดึงข้อมูล User และ ตรวจสอบสิทธิ์ (Security Check)
+        // ==========================================
+        const storedUser = localStorage.getItem('tas_user');
+        if (!storedUser) {
+            window.location.href = 'login.html';
+        }
+
+        const user = JSON.parse(storedUser);
+        const userLevel = String(user.level || '').trim();
+
+        console.log("Checking Access for Level:", userLevel);
+
+        // อนุญาตเฉพาะ Level 1 (Super Admin) และ 2 (Admin)
+        if (userLevel !== '1' && userLevel !== '2') {
+            document.body.style.display = 'none';
+            setTimeout(() => {
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'ไม่สามารถเข้าถึงได้',
+                        text: `สิทธิ์ของคุณคือระดับ ${userLevel} (ต้องการระดับ 1 หรือ 2)`,
+                        confirmButtonText: 'กลับหน้าเมนู',
+                        allowOutsideClick: false,
+                        backdrop: `rgba(0,0,0,0.9)`
+                    }).then(() => {
+                        window.location.replace('menu.html');
+                    });
+                } else {
+                    alert('ไม่สามารถเข้าถึงได้: สำหรับผู้ดูแลระบบเท่านั้น');
+                    window.location.replace('menu.html');
+                }
+            }, 100);
+            throw new Error("Unauthorized Access");
+        }
+
+        // ==========================================
+        // 2. เริ่มต้นระบบเมื่อผ่านการตรวจสอบ
+        // ==========================================
+
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('startDate').value = today;
+        document.getElementById('endDate').value = today;
+
         function selectMode(mode) {
             document.querySelectorAll('.radio-option').forEach(el => el.classList.remove('selected'));
             document.querySelector(`input[value="${mode}"]`).parentElement.classList.add('selected');
+            document.querySelector(`input[value="${mode}"]`).checked = true;
             document.getElementById('dateGroup').style.display = (mode === 'manual') ? 'block' : 'none';
         }
 
-        function log(msg, type = 'normal') {
-            const box = document.getElementById('console');
+        function getTimeStr() {
             const now = new Date();
-            const ts = `[${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}]`;
-            let colorClass = type === 'info' ? 'c-info' : type === 'success' ? 'c-success' : type === 'warn' ? 'c-warn' : type === 'error' ? 'c-error' : type === 'highlight' ? 'c-highlight' : '';
+            return `[${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}]`;
+        }
+
+        function log(msg, type = 'normal', detail = null) {
+            const box = document.getElementById('console');
+            const ts = getTimeStr();
+            let colorClass = '';
+            if (type === 'info') colorClass = 'c-info';
+            else if (type === 'success') colorClass = 'c-success';
+            else if (type === 'warn') colorClass = 'c-warn';
+            else if (type === 'error') colorClass = 'c-error';
+            else if (type === 'highlight') colorClass = 'c-highlight';
+
             box.innerHTML += `<div class="log-line"><span class="ts">${ts}</span> <span class="msg ${colorClass}">${msg}</span></div>`;
+            if (detail && document.getElementById('chkVerbose').checked) {
+                box.innerHTML += `<div class="log-line"><span class="ts"></span> <span class="msg c-detail">${detail}</span></div>`;
+            }
             box.scrollTop = box.scrollHeight;
         }
+
+        function formatDateDB(date) { return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`; }
+        function formatDateURL(date) { return `${String(date.getDate()).padStart(2, '0')}${String(date.getMonth() + 1).padStart(2, '0')}${date.getFullYear()}`; }
 
         function parseHTMLTable(htmlString, dateStr) {
             const parser = new DOMParser();
@@ -290,22 +486,9 @@
                     const name = cols[1].innerText.trim();
                     let t_in = cols[2].innerText.trim();
                     let t_out = cols[3].innerText.trim();
-                    
                     if (pid && pid !== "รหัสพนักงาน" && pid !== "ไม่พบข้อมูล") {
-                        if (t_in === "-" || t_in === "") t_in = null;
-                        if (t_out === "-" || t_out === "") t_out = null;
-
-                        // ตรรกะใหม่: หากมีเวลาช่องเดียวและ >= 16:30 ให้บันทึกเป็นเวลากลับ
-                        if (t_in && !t_out) {
-                            const [hour, minute] = t_in.split(':').map(Number);
-                            if (hour > 16 || (hour === 16 && minute >= 30)) {
-                                t_out = t_in;
-                                t_in = null;
-                            }
-                        }
-
-                        if (t_in && t_in.length === 5) t_in += ":00";
-                        if (t_out && t_out.length === 5) t_out += ":00";
+                        if (t_in === "-" || t_in === "") t_in = null; else if (t_in.length === 5) t_in += ":00";
+                        if (t_out === "-" || t_out === "") t_out = null; else if (t_out.length === 5) t_out += ":00";
                         records.push({ personnel_id: pid, full_name: name, work_date: dateStr, time_in: t_in, time_out: t_out });
                     }
                 }
@@ -315,12 +498,137 @@
 
         async function runProcess() {
             const btn = document.getElementById('btnStart');
+            const mode = document.querySelector('input[name="mode"]:checked').value;
             btn.disabled = true;
-            log("> Initializing Smart Process Engine v3.5...", 'highlight');
-            // ... (ตรรกะการดึงข้อมูลและ Upsert ลง Supabase ตามโครงเดิม) ...
-            log("✅ ประมวลผลเสร็จสิ้น", 'success');
-            btn.disabled = false;
+            document.getElementById('console').innerHTML = '';
+            log("> Initializing Process Engine v3.4 (URL Pattern Fixed)...", 'highlight');
+
+            try {
+                // 1. Config Check & URL Prep
+                const { data: configData } = await sbClient.from(TAS_CONFIG.TABLE_SETTINGS).select('value').eq('key', 'data_url').single();
+                let proxyBase = "";
+                if (configData?.value) {
+                    let target = configData.value.trim();
+                    if (target.includes("url=")) target = decodeURIComponent(target.split("url=")[1]);
+                    if (!target.endsWith('/')) target += '/';
+                    proxyBase = target;
+                    if (userLevel === '1') {
+                        log(`Target Web Base: ...${target.slice(-25)}`, 'info');
+                    } else {
+                        log(`Target Web Base: [Protected]`, 'info');
+                    }
+                } else log("No 'data_url'. Skipping Web.", 'warn');
+
+                // 2. Date Range
+                let start, end;
+                const todayDate = new Date(); todayDate.setHours(0, 0, 0, 0);
+
+                if (mode === 'manual') {
+                    start = new Date(document.getElementById('startDate').value);
+                    end = new Date(document.getElementById('endDate').value);
+                } else {
+                    const { data: lastRec } = await sbClient.from(TAS_CONFIG.TABLE_TARGET)
+                        .select('work_date').order('work_date', { ascending: false }).limit(1).single();
+                    start = lastRec ? new Date(lastRec.work_date) : new Date(todayDate);
+                    if (start > todayDate) start = new Date(todayDate);
+                    log(`Last synced: ${formatDateDB(start)}`, 'info');
+                    end = new Date(todayDate);
+                }
+                start.setHours(0, 0, 0, 0); end.setHours(0, 0, 0, 0);
+
+                log(`PROCESSING RANGE: ${formatDateDB(start)} to ${formatDateDB(end)}`, 'highlight');
+                let loop = new Date(start);
+                let grandTotal = 0;
+
+                while (loop <= end) {
+                    const dateStr = formatDateDB(loop);
+                    const urlDate = formatDateURL(loop); // DDMMYYYY
+                    log(`Processing Date: ${dateStr}`, 'highlight');
+
+                    // 3.1 Web Fetch
+                    let webData = [];
+                    if (proxyBase) {
+                        try {
+                            const targetUrl = `${proxyBase}${urlDate}/`;
+                            const finalUrl = `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`;
+                            if (userLevel === '1') {
+                                log(`   GET: ${targetUrl}`, 'normal');
+                            } else {
+                                log(`   GET: https://www.protectedtext.com/`, 'normal');
+                            }
+
+                            const res = await fetch(finalUrl);
+                            if (res.ok) {
+                                const htmlText = await res.text();
+                                webData = parseHTMLTable(htmlText, dateStr);
+                                log(`   + Web: ${webData.length} records`, 'info');
+                            } else log(`   - Web HTTP Error ${res.status}`, 'warn');
+                        } catch (e) { log(`   - Web Fetch Failed (Skip)`, 'warn', e.message); }
+                    }
+
+                    // 3.2 DB Fetch
+                    let dbData = [];
+                    const sourceTable = TAS_CONFIG.TABLE_SOURCE || "TimeStamp";
+                    try {
+                        const { data: internal, error: errInt } = await sbClient.from(sourceTable).select('*').eq('work_date', dateStr);
+                        if (errInt) throw errInt;
+                        if (internal) {
+                            dbData = internal;
+                            log(`   + DB (${sourceTable}): ${dbData.length} records`, 'info');
+                        }
+                    } catch (e) {
+                        log(`   - DB Error: ${e.message}`, 'error');
+                    }
+
+                    // 3.3 Merge & Save
+                    const map = {};
+                    const addToMap = (rec, src) => {
+                        if (!map[rec.personnel_id]) map[rec.personnel_id] = { ...rec, sources: [src] };
+                        else {
+                            const cur = map[rec.personnel_id];
+                            if (!cur.sources.includes(src)) cur.sources.push(src);
+                            if (rec.time_in && (!cur.time_in || rec.time_in < cur.time_in)) cur.time_in = rec.time_in;
+                            if (rec.time_out && (!cur.time_out || rec.time_out > cur.time_out)) cur.time_out = rec.time_out;
+                        }
+                    };
+                    webData.forEach(r => addToMap(r, 'Web'));
+                    dbData.forEach(r => addToMap(r, 'DB'));
+
+                    const payload = Object.values(map).map(item => ({
+                        id: `${formatDateURL(new Date(item.work_date))}${item.personnel_id}`,
+                        personnel_id: item.personnel_id, full_name: item.full_name,
+                        work_date: item.work_date, time_in: item.time_in, time_out: item.time_out, verified: 0
+                    }));
+
+                    if (payload.length > 0) {
+                        const { error: saveErr } = await sbClient.from(TAS_CONFIG.TABLE_TARGET).upsert(payload, { onConflict: 'personnel_id, work_date' });
+                        if (saveErr) log(`   ❌ Save Failed: ${saveErr.message}`, 'error');
+                        else {
+                            log(`   ✅ Saved: ${payload.length} records`, 'success');
+                            grandTotal += payload.length;
+                            if (document.getElementById('chkVerbose').checked) {
+                                payload.forEach(p => log(`      > ${p.full_name}`, 'normal', `${p.time_in || '-'} / ${p.time_out || '-'} [${map[p.personnel_id].sources.join('+')}]`));
+                            }
+                        }
+                    } else log("   (No data)", 'normal');
+
+                    loop.setDate(loop.getDate() + 1);
+                    await new Promise(r => setTimeout(r, 200));
+                }
+
+                log(`========================================`);
+                log(`SUMMARY: Total Saved ${grandTotal}`, 'highlight');
+                Swal.fire('สำเร็จ', `ประมวลผลเสร็จสิ้น ${grandTotal} รายการ`, 'success');
+
+            } catch (err) {
+                console.error(err);
+                log(`CRITICAL: ${err.message}`, 'error');
+                Swal.fire('Error', err.message, 'error');
+            } finally {
+                btn.disabled = false;
+            }
         }
     </script>
 </body>
+
 </html>
